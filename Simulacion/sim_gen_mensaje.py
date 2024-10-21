@@ -4,7 +4,7 @@ from time import*
 
 ser = Serial('COM14', 115200, bytesize=EIGHTBITS, parity=PARITY_NONE, stopbits=STOPBITS_ONE)  # open serial port
 
-print(ser.name)         # check which port was really used
+print(ser.name)# check which port was really used
 
 mensaje_rx = ""
 mensaje_tx = ""
