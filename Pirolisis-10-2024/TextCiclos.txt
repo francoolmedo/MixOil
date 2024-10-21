@@ -1,0 +1,34 @@
+1	dR	1	1	Minuto				
+2	NDB	6	6	cm	Duración MINIMA de Encendido  			
+3	NDMAX  	250	250	cm	Ascenso Nivel MixOil xcada batch (Dep?sito)			
+4	NDMIN  	30	30	cm	Nivel Máximo MixOil (Depósito)			
+5	NEQ    	49	49	L/cm	Nivel Mínimo MixOil (Depósito)			
+6	PEMP	400	400	Kgf	Convers Altura a Volumen (MixOil Deposito)			
+7	PETARA 	100	100	Kgf	Peso de la Mat.Prima para un batch			
+8	PIRMAX 	500	500	mBar	Peso del canasto vac?o (en kgf)			
+9	PIRNOM 	200	200	mBar	Presión Máxima Interna (Umbral ALARMA)			
+10	STALARM	25	25	°C	Presión de trabajo Interna (Gauge)			
+11	TCCORT	510	510	°C	Umbral de Alarma (Excede la CONSIGNA)			
+12	TCFAlar	700	700	°C	Umbral de ALARMA por TC Cortada			
+13	TDMax	40	40	°C	Umbral de ALARMA de la C?mara de Fuego			
+14	tESTR	45	45	Seg	Temp Max Interna Deposito MixOPil			
+15	TEXT	300	300	°C	Tiempo de Estrella (P/watch Dog)			
+16	TIRBP	50	50	°C	Temp Max p/ extraer reactor Horno			
+17	TIRC1	430	430	°C	Banda Proporcioal para la TIR			
+18	TIRC2	430	430	°C	Consigna en °C para TIR en ETAPA 1			
+19	TIRC3	430	430	°C	Consigna en °C para TIR en ETAPA 2			
+20	TIRNA	200	200	n 8bit	Consigna en °C para TIR en ETAPA 3			
+21	TPCMAX	120	120	°C	Consigna MAX - MIN en la variable TIRN			
+22	tPIR1	60	60	Minuto	Temperatura Máxima de Pre Calentamiento			
+23	tPIR2	90	90	Minuto	Pirólisis: Duración Etapa 1			
+24	tPIR3	60	60	Minuto	Pirólisis: Duraci?n Etapa 2			
+25	TMAN	200	200	°C	Pirólisis: Duraci?n Etapa 3			
+26	TPIRO1	420	420	°C	Temperatura de Pirólisis Etapa 1			
+27	TPIRO2	420	420	°C	Temperatura de Pirólisis Etapa 2			
+28	TPIRO3	420	420	°C	Temperatura de Pirólisis Etapa 3			
+29	TVUELC	120	120	°C	Temp Max p/ volcar la carbonilla			
+30	RES1	1	1	-	Reserva Carlitos 1			
+31	RES2	2	2	-	Reserva Carlitos 2			
+32	RES3	3	3	-	Reserva Carlitos 2			
+33	RES4	4	4	-	Reserva Carlitos 2			
+34	RES5	5	5	-	Reserva Carlitos 2			

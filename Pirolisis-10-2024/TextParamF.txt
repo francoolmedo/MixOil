@@ -1,0 +1,34 @@
+1	dR	13	13	Segundo	Tiempo MAXIMO para Encender					
+2	NDB	10	10	cm	Ascenso Nivel MixOil xcada batch (Depósito)  					
+3	NDMAX  	250	250	cm	Nivel Máximo MixOil (Depósito)					
+4	NDMIN  	30	30	cm	Nivel Mínimo MixOil (Depósito)					
+5	NEQ    	49	49	L/cm	Convers Altura a Volumen (MixOil Deposito)					
+6	PEMP	400	400	Kgf	Peso de la Mat.Prima para un batch					
+7	PETARA 	100	100	Kgf	Peso del canasto vacio (en kgf)					
+8	PIRMAX 	500	500	mBar	Presión Máxima Interna (Umbral ALARMA)					
+9	PIRNOM 	200	200	mBar	Presión de trabajo Interna (Gauge)					
+10	STALARM	40	40	°C	Umbral de Alarma (Excede la CONSIGNA)					
+11	TCCORT	500	500	°C	Umbral de ALARMA por TC Cortada					
+12	TCFAlar	700	700	°C	Umbral de ALARMA de la Camara de Fuego					
+13	TDMax	41	41	°C	Temp Max Interna Deposito MixOPil					
+14	tESTR	45	45	Seg	Tiempo de Estrella (P/watch Dog)					
+15	TEXT	300	300	°C	Temp Max p/ extraer reactor Horno					
+16	TIRBP	40	40	°C	Banda Proporcioal para la TIR					
+17	TIRC1	430	430	°C	Consigna en °C para TIR en ETAPA 1					
+18	TIRC2	430	430	°C	Consigna en °C para TIR en ETAPA 2					
+19	TIRC3	430	430	°C	Consigna en °C para TIR en ETAPA 3					
+20	TIRNA	200	200	n 8bit	Consigna MAX - MIN en la variable TIRN					
+21	TPCMAX	135	135	°C	Temperatura Máxima de Pre Calentamiento					
+22	tPIR1	2	2	Minuto	Pirólisis: Duración Etapa 1					
+23	tPIR2	1	1	Minuto	Pirólisis: Duración Etapa 2					
+24	tPIR3	1	1	Minuto	Pirólisis: Duración Etapa 3					
+25	TMAN	200	200	°C	Temperatura Modo Manual					
+26	TPIRO1	420	420	°C	Temperatura de Pirólisis Etapa 1					
+27	TPIRO2	420	420	°C	Temperatura de Pirólisis Etapa 2					
+28	TPIRO3	420	420	°C	Temperatura de Pirólisis Etapa 3					
+29	TVUELC	110	110	°C	Temp Max p/ volcar la carbonilla					
+30	Esc500	500	500	Adim	1000xFactor Mult Escala T Int Reactor(0,500)					
+31	Esc800	800	800	Adim	1000xFactor Mult Escala T Cam Fuego(0,800)					
+32	Esc060	59	59	Adim	1000xFactor Mult Escala Temp MixOil(0,059)					
+33	EscMPX	50	50	Adim	1000xFactor Mult Escala P Int Reactor(0,050)					
+34	EscNIV	121	121	Adim	10xFactor Mult Escala Vol Int Depósito(12,10)					

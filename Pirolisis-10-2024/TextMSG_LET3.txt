@@ -1,0 +1,11 @@
+
+Aguardando comando
+Grabando parametros aguarde...
+Modo MANUAL
+Operando en MANUAL con el QUEMADOR
+QUEMADOR
+Operando en MANUAL con el PRECALENTADOR
+PRECALENTADOR
+Operando en MANUAL con el MOLINO
+MOLINO
+ALARMA

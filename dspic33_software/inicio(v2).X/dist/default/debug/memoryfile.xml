@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project>
+  <executable name="dist/default/debug/inicio_v2_.X.debug.elf">
+    <memory name="data">
+      <units>bytes</units>
+      <length>30720</length>
+      <used>1500</used>
+      <free>29220</free>
+    </memory>
+    <memory name="program">
+      <units>bytes</units>
+      <length>261888</length>
+      <used>39015</used>
+      <free>222873</free>
+    </memory>
+  </executable>
+</project>
