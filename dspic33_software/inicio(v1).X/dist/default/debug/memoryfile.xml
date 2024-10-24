@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <project>
-  <executable name="dist/default/debug/inicio.X.debug.elf">
+  <executable name="dist/default/debug/inicio_v1_.X.debug.elf">
     <memory name="data">
       <units>bytes</units>
       <length>30720</length>
@@ -11,8 +11,8 @@
     <memory name="program">
       <units>bytes</units>
       <length>261888</length>
-      <used>39948</used>
-      <free>221940</free>
+      <used>39906</used>
+      <free>221982</free>
     </memory>
   </executable>
 </project>

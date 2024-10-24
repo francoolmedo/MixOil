@@ -1,4 +1,4 @@
-          /* RUTINA DE RECEPCION DEL PUERTO UART 1*/
+/* RUTINA DE RECEPCION DEL PUERTO UART 1*/
 #include "p33Fxxxx.h"
 #include <xc.h>
 #include <stdint.h>            //Includes uint16_t definition                    
@@ -23,33 +23,24 @@
 extern char dato_Rx[TAM_Rx];
 extern unsigned int RX_CHEKA;
 //------------------------------------------------------------------------
-       
+
+void __attribute__((__interrupt__, no_auto_psv)) _U1RXInterrupt(void) {
+    static int r = 0;
+
+    while (DataRdyUART1()) {
+        dato_Rx[r] = ReadUART1();
+
+    }
+    if (dato_Rx[r] != '\n') {
+        r++;
+    } else {
+        dato_Rx[r] = '\0';
+        r = 0;
+    }
+    if (r == TAM_Rx)
+        r = 0;
 
 
-  void __attribute__((__interrupt__,no_auto_psv)) _U1RXInterrupt(void)
-{
-   static int r=0;
-   
-   
-   
-       
-   while(DataRdyUART1())
- {
-  dato_Rx[r]= ReadUART1();
-    
-  }
-   if(dato_Rx[r]!='\n'){ 
-       r++;
-   }
-   else{     
-   dato_Rx[r]='\0';
-   r=0;
-    } 
-   if(r==TAM_Rx)
-       r=0;
-   
-        
     IFS0bits.U1RXIF = 0; // clear RX interrupt flag
-} 
+}
 
- 

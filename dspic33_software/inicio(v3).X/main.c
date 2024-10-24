@@ -29,6 +29,8 @@
 #include "libpic30.h"
 
 
+
+
 //unsigned char wSPI[20];
 
 // ********** DEFINICIONES ***********
@@ -176,7 +178,7 @@ unsigned int EscNIV = 0; // Adim  | 35 | 10XFactor Mult Escala Vol Int Deposito 
 unsigned int dPIR = 0;
 unsigned int ALARLAV = 0;
 unsigned int ALARINM = 0;
-//unsigned int a = 0;
+
 
 /******************************************************************************
  *                            FIN PARAMETROS                                  * 
@@ -274,7 +276,8 @@ double operando_b;
 /******************************************************************************
  *              VARIABLE DE TIEMPO TIMER 2 TICKS DE 1 SEG 1 MIN               *            
  * ****************************************************************************/
-//unsigned long int tareas = 0; // contador de tareas periodicas ticks t=20ms
+unsigned long int tareas = 0; // contador de tareas periodicas ticks t=20ms
+unsigned char TIME_SEL = 0;
 
 #define TIC 10 // Tiempo de interrupcion en milisegundos
 unsigned int NP1K = (1000 / TIC); // Variable de referencia de tiempo para TP1S
@@ -302,8 +305,6 @@ unsigned int min = 0;
  *******************************************************************************/
 
 unsigned int SOFTK_A = 0, SOFTK_N = 0, SOFTK_N1 = 0;
-bool YAC = 0; // "Ya actualizo?" - Variable de actualizacion forzada con SoftKey
-bool PASADA = 0; // N de Pasada - Variable de actualizacion forzada con SoftKey
 
 /*******************************************************************************
  *                      FIN VARIABLES SOFTKEY                                  *
@@ -399,11 +400,8 @@ int main(void) {
     inicializaUART(BRGVAL); //Inicializa UART     
     inicializaADC(); //Inicializacion ADC 10 bit
     inicializaDMA(); //Inicializa DMA 
-    inicializaTimer2(); //iniciliza timer2 (NO INICIA)
+    inicializaTimer2(); //iniciliza timer2 (NO INICIA) 
 
-    // Inicializo valores de contadores de TAREAS PERIODICAS
-    TP1S = NP1K;
-    TP10S = NP10K;
 
 
     //INDICADOR OK EN PLACA LED VERDE 
@@ -453,15 +451,9 @@ int main(void) {
 
     //----FIN PARAMETROS DERIVADOS      
 
-    ND = ND & 0x0fff;
-    TIR = TIR & 0x0fff;
-    TIP = TIP & 0x0fff;
-    TCF = TCF & 0x0fff;
-    PIR = PIR & 0x0fff;
-    TIB = TIB & 0x0fff;
-    TD = TD & 0x0fff;
+    //------------------- LOOP TAREA NO PERIODICA (PSEUDO PERIODICA) --------------------
 
-    //------------------- LOOP TAREA NO PERIODICA (PSEUDO PERIODICA) -------------------
+
     while (1) {
 
         Punto = 0; //POSICIONA  TAREA PERIODICA EN PUNTO 0
@@ -494,6 +486,7 @@ int main(void) {
             RX_CHEKC = 0;
 
             if (Punto == 0) {
+
                 do {
                     /* CHEK DE PUERTO Y TABLA DE PARAMETROS */
                     if (strncmp(dato_Rx, "H=", 2) == 0)
@@ -515,15 +508,19 @@ int main(void) {
                                 SK_C = 0;
                             }
                             break;
-                        case 16:
-                            Punto = 3; //SE PRESIONA PULSADOR  SERVOS CASE 16
+
+                        case 16: Punto = 3; //SE PRESIONA PULSADOR  SERVOS CASE 16
                             SK_C = 0;
                             break;
+
                         default: break;
                     }
+
+
                 }
                 if (strncmp(dato_Rx, "H=", 2) == 0)
                     sscanf(dato_Rx, "H=%2x", &RX_CHEKA); // verificacion de CRC enviado A= 
+
 
             } while (Punto != 2 && RX_CHEKA != CHEK_A);
 
@@ -549,7 +546,9 @@ int main(void) {
                             Punto = 0;
                             signal_emergencia = 1;
                             __delay_ms(10000);
+
                             break; // SE ACTIVA EMERGENCIA PPAL          
+
 
                         case 22:
                             if (Punto == 4 && SOFTK_A == 6 && SOFTK_N == 0) {
@@ -588,10 +587,18 @@ int main(void) {
 
                     }
 
-                } while (Punto != 2 && Punto != 0); //salida de ciclo [<---(NO)---->]
-            }
-        } while (Punto == 0); // TECLA VOLVER
 
+
+
+
+
+                } while (Punto != 2 && Punto != 0); //salida de ciclo [<---(NO)---->]
+
+            }
+
+
+
+        } while (Punto == 0); // TECLA VOLVER
 
         //--------------------------COMIENZO DEL PUNTO B (PARAMETRIZACION)-------------------------------
 
@@ -617,55 +624,326 @@ int main(void) {
          * FALLA DE CHEK_P  :  NO SE ENVIA "COMANDO" A MMI 
          * PASA POR SOFTKEY :  SE ENVIA "COMANDO" Y SE VALIDA CHEK_C ANTES DE LLEGAR
          */
-        switch (Punto) {
-            case 2:
-                for (int i = 0; i < 4; i++) {
-                    __delay_ms(10);
-                    generar_A(0x000000, 0x0000, 0, 0); // Limpio los letreros de las SoftKeys ya que no se utilizan
-                    __delay_ms(10);
+
+        if (Punto == 2) {
+
+            STOP_Timer2(); //DETIENE TIMER 2 (TAREA PERIODICA DE 10MS )
+            HAB = 0; // SE HACE HABILITACION = 0
+            WDD = 0;
+
+
+            STATUS_LED = 1;
+            __delay_us(50);
+
+            parametros();
+            do {
+
+                printf("A=00000000000000000000000000000000000000002000000000000000000202\n");
+                __delay_ms(15);
+                if (strncmp(dato_Rx, "H=", 2) == 0) {
+                    sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
+                } // verificacion de CRC enviado A= 
+
+            } while (RX_CHEKA != 2);
+
+
+            __asm__ volatile ( "reset "); //Instruccion de reinicio A LA SALIDA DE PARAMETROS    
+        }
+
+        /* FIN DE PARAMATROS */
+
+        //-------------------COMIENZO DEL PUNTO C-----------------------------------    
+        /*
+         * colocar MMI en pantalla principal ok
+         * Comienza envio rutinario de msj 10seg   0k
+         * salidas HAB=Garr=1; (energia electrica) 0k
+         * verificar las condiciones de ciclo:
+                -Reactor en el horno
+                -NO EMERGENCIA ED9=1
+                -ND<250-NDB
+     
+         GENERAR ADVERTENCIA EN CASO DE INCUMPLIMIENTO
+             -PEc>=Ptara   Cesto en la balanza
+             -Larr=1       Molino lavador en marcha
+     
+         */
+        //----------------- FIN DEL SISTEMA DE ARRANQUE---------------------------------
+
+    }// FINAL DE LA TAREA NO PERIODICA
+
+
+
+
+
+    return 0;
+}
+
+/*INTERRUPCION TIMER2 10ms TAREA PERIODICA */
+
+void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
+    /* Interrupt Service Routine code goes here */
+
+    Garr = SON;
+
+
+    int i; //for del conversor prueba carteles
+    tareas++;
+    TIME_SEL++;
+    /*TIEMPO DE CONMUTACION LLAVE ANALOGICA*/
+    if (TIME_SEL == 200) {
+
+        SEL ^= 1;
+
+        TIME_SEL = 0;
+    }
+    //-------------------------------------
+
+    if ((signal_emergencia == 1)) { // PULSADOR DE EMERGENCIA BORRAR TODAS LAS BANDERAS Y APAGAR MAQUINAS
+
+        __asm__ volatile ( "reset "); //Instruccion de reinicio A LA SALIDA DE PARAMETROS    
+
+    }
+
+
+    if (tareas == 0xffffff) {
+        tareas = 1;
+    }
+
+
+
+    if (HAB == 1) {
+        pulso_watchdog();
+    }
+
+    // EJECUTA SIEMPRE   
+    SOFTK_N1 = (!SKC3) << 2 | (!SKC2) << 1 | (!SKC1);
+
+    if (SOFTK_A != SOFTK_N1) {
+        SOFTK_A = SOFTK_N;
+        SOFTK_N = SOFTK_N1;
+    }
+
+
+    if (Punto >= 3 && !(tareas % 5)) {
+
+        LlaQuemador = apagar_Q == 1 ? 1 : 0; //NF  DA[1]   LLama de quemador+Fuego Horno+ Cartel
+        REhorno = (TIR <= TCCORT_MUL2) ? 1 : 0; //NF  DA[0]   Reactor en el horno 
+        AlarV = Alarma_verde == 1 ? 1 : 0; //NF  DA[2]   Alarma Verde
+        AlarR = Alarma_roja == 1 ? 1 : 0;
+        REbasc = (TIB <= TCCORT_MUL2) ? 1 : 0; //NF  DA[3]   Reactor en estacion Basc  
+        Ctl_Llama = apagar_P == 1 ? 1 : 0; //NF  DA[5]   Cartel estacion PreC
+        REpc = (TIP <= TCCORT_MUL2) ? 1 : 0;
+        ; //NF  DA[4]   Reactor en estacion PreC  
+
+
+        Cesto_0 = (!PE1) && (PE2); //NF  DA[6]   COndicion Cesto
+        Cesto_1 = (!PE2) && (!PE1); //NF  DA[7]   COndicion Cesto
+
+        Molino_march = BANDERA_lluviamarch == 1 ? 1 : 0; //NF  DA[8]   
+        BombaM_march = !LBA; //NF  DA[9]   COndicion Cesto  
+
+        ND = ND & 0x0fff;
+        TIR = TIR & 0x0fff;
+        TIP = TIP & 0x0fff;
+        TCF = TCF & 0x0fff;
+        PIR = PIR & 0x0fff;
+        TIB = TIB & 0x0fff;
+        TD = TD & 0x0fff;
+
+        if (TIME_SEL >= 100) {
+
+            if (SEL == 0) {
+                for (i = 0; i <= TAM_CONVERSOR - 1; i++)
+                    V[i] = convierteAD(i);
+                ND = (ND * NDa + V[0] * NDb);
+                TIR = TIR * TIRa + V[1] * TIRb;
+                TIP = TIP * a + V[2] * b;
+                TCF = (TCF * a + V[3] * b);
+
+
+            } else {
+
+                for (i = 0; i <= TAM_CONVERSOR - 1; i++)
+                    V[i + 4] = convierteAD(i);
+                ND = ND * a + V[4] * b;
+                PIR = PIR * a + V[5] * b;
+                TIB = TIB * a + V[6] * b;
+                TD = TD * a + V[7] * b;
+
+            }
+        }
+
+
+        BANDERA_HELPQNDmax = ((float) ND >= NCMAX) ? 1 : 0; //no se puede realizar mas ciclos deposito lleno
+        BANDERA_HELPQNDmin = ((float) ND < NCMIN) ? 1 : 0; // falta nivel para realizar pirolisis
+        BANDERA_HELPQTCF = !QOK;
+
+
+    }
+
+
+    //-------------- FIN TABLA ACTUALIZACION VARIABLES ANALOG/DIGITAL  ------------------- 
+
+
+    switch (Punto) {
+            /* ENVIO EL CHSUM DE LA TABLA DE PARAMETROS CAMBIO A PANTALLA 2  */
+            /* INICIO DE PUNTO 0 */
+        case 0:
+
+            if (Punto == 0 && !(tareas % 25)) {
+
+                if (RX_CHEKC != CHEK_C && DMA0REQbits.FORCE == 0) {
+                    sprintf(aux_dma_tx, "C=%.2x%.2x%.2x\n", 1, CHEK_P, CHEK_C); // ME DEVUELVE LO QUE YO LE ENVIO COMO CHEK_P
+                    cargar_DMA_C(aux_dma_tx);
+                    enviar_DMA();
                 }
 
-                STOP_Timer2(); //DETIENE TIMER 2 (TAREA PERIODICA DE 10MS )
-                HAB = 0; // SE HACE HABILITACION = 0
-                WDD = 0;
-
-                STATUS_LED = 1;
-                __delay_us(50);
-
-                parametros();
-                do {
-                    printf("A=00000000000000000000000000000000000000002000000000000000000202\n");
-                    __delay_ms(15);
-                    if (strncmp(dato_Rx, "H=", 2) == 0) {
-                        sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
-                    } // verificacion de CRC enviado A= 
-
-                } while (RX_CHEKA != 2);
+                if (RX_CHEKC == CHEK_C) {
+                    RX_CHEKC = 0;
+                    CHEK_A = -1; // si se corta elmensaje manda H=0 OJO
+                    SK_C = 0;
+                    tareas = 1;
+                }
 
 
-                __asm__ volatile ( "reset "); //Instruccion de reinicio A LA SALIDA DE PARAMETROS    
+            }//CIERRE DE PUNTO 0
+            break;
+            /* FIN DE PUNTO 0 */
 
-                //-------------------COMIENZO DEL PUNTO C-----------------------------------    
-                /*
-                 * colocar MMI en pantalla principal ok
-                 * Comienza envio rutinario de msj 10seg   0k
-                 * salidas HAB=Garr=1; (energia electrica) 0k
-                 * verificar las condiciones de ciclo:
-                        -Reactor en el horno
-                        -NO EMERGENCIA ED9=1
-                        -ND<250-NDB
-     
-                 GENERAR ADVERTENCIA EN CASO DE INCUMPLIMIENTO
-                     -PEc>=Ptara   Cesto en la balanza
-                     -Larr=1       Molino lavador en marcha
-     
-                 */
-                /* FIN DE PARAMATROS */
-                break;
-            case 5:
-                /* INICIO DEL PUNTO 5*/
-                /* FUNCIONAMIENTO DEL MODO MANUAL */
-                //DENTRO DE MODO MANUAL TECLA QUEMADOR-MOLINO-PRECALENTADOR-       -RETROCEDER - ACTUALIZAR
+
+            /* INICIO DEL PUNTO 1 PANTALLA ARRANQUE 1 LETREROS ESTADOS */
+        case 1:
+
+            if (Punto == 1 && !(tareas % 25)) {
+                switch (SK_C) {
+                    case 0:
+                        if (RX_CHEKA != 49) { //CONTROL DE LOS CHEK ENVIADO
+                            cargar_DMA_A("A=00000000000000000000000000000000000000001110000000000000200031\n");
+                            enviar_DMA();
+
+                        }
+                        if (RX_CHEKA == 49) {
+                            SK_C = 1;
+                            CHEK_A = -1;
+                            tareas = 1;
+                        }
+
+                        break;
+
+                    default: break;
+                }
+            }/* FIN DE PUNTO 1*/
+            break;
+
+        case 2:
+
+            if (RX_CHEKA != CHEK_A) {//sk eo
+                generar_A(0x650edc, 0x0000, 0, 0);
+            }
+            /*
+            if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO BORRAR TODAS LAS SK
+                SK_C = 1;
+                tabla_sk = 1;
+            }
+             */
+
+            /* SE ACCIONO SERVOS (PUNTO = 3 ) PASA A PANTALLA PPAL*/
+        case 3:
+
+            // FRANCO: AGREGAR CARTEK DE GRUA FUERA DE SERVICIO, HABLAR CON JAVIER
+
+            if (Punto == 3) { //IMPRESION LETREROS SELECCION AUTOMATICO-MANUAL-PARAMETROS-ACTUALIZAR-RETROCEDER
+                Alarma_verde = 1;
+                EN_ESPERA = 1;
+                MODO_MANUAL = 0;
+                EN_CICLO = 0;
+                DA = AlarR << 13 | EN_ESPERA << 10 | MODO_MANUAL << 11 | EN_CICLO << 12 | BombaM_march << 9 | Molino_march << 8 | Cesto_1 << 7 | Cesto_0 << 6 | Ctl_Llama << 5 | REpc << 4 | REbasc << 3 | AlarV << 2 | LlaQuemador << 1 | REhorno;
+
+
+                // IMPRESION DE  LETREROS DE LAS SOFTKEY
+                switch (SK_C) {
+
+                        /* SE PASA A PANTALLA PRINCIPAL Y SE IMPRIMEN SOFTKEY */
+                    case 0:
+
+                        if (RX_CHEKA != CHEK_A && !(tareas % 25)) {
+                            generar_A(0x650321, 0x0100, 1, 0);
+
+                        }
+
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO CAMBIO DE PANTALLA
+                            CHEK_A = -1;
+                            tareas = 1;
+                            SK_C = 1;
+                            Punto = 4;
+
+                        }
+                        break;
+
+                    default:
+                        Garr = 0;
+                        break;
+
+                }
+
+
+
+
+            } // FIN DEL PUNTO 3 
+
+
+            break;
+
+            /*************************************************************************************************** 
+             * PUNTO = 4  SE REALIZA CHEKEO YA SE HAN ACTIVADO LOS SERVOS TIENE OPCIONES PARA IR A PARAMETROS  *
+             *   TIEMPO LARGOS DE ENVIO DE DATOS 10S CON POSIBILIDAD INMEDIATA                                 *
+             ***************************************************************************************************/
+        case 4:
+            //ESPERANDO COMANDO - MANUAL- AUTOMATICO- ACTUALIZAR
+            if (Punto == 4) {
+
+                // TECLA RETROCEDER SK 6
+                if (SOFTK_A == 6 && SOFTK_N == 0) {
+                    SOFTK_A = 0;
+                    SK_C = 0;
+                    Punto = 0;
+                }
+
+                // ENVIO DE MSJ ACTUALIZACION DE PANTALLA CADA 10 SEGUNDOS
+                if (!(tareas % 250)) {
+                    DA = AlarR << 13 | EN_ESPERA << 10 | MODO_MANUAL << 11 | EN_CICLO << 12 | BombaM_march << 9 | Molino_march << 8 | Cesto_1 << 7 | Cesto_0 << 6 | Ctl_Llama << 5 | REpc << 4 | REbasc << 3 | AlarV << 2 | LlaQuemador << 1 | REhorno;
+                    generar_A(0x650321, 0x0100, 1, 0);
+
+                }
+
+                // TECLA ACTUALIZAR SK 5    
+                if (SOFTK_A == 5 && SOFTK_N == 0) {
+                    SOFTK_A = 0;
+                    generar_A(0x650321, 0x0100, 1, 0);
+                }
+
+                //TECLA SK 3 MODO MANUAL
+                if (SOFTK_A == 3 && SOFTK_N == 0) { // PRESIONO SK 3- ELIJO MODO MANUAL
+                    SOFTK_A = 0;
+                    SOFTK_N = 0;
+                    Punto = 5; //MODO MANUAL
+                    MODO = 2; // TAREA NO PERIODICA ENTRA EN MANUAL
+                    tareas = 1;
+                    SK_C = 0;
+                    ESTADO_0 = 0;
+                    tabla_sk = 0;
+
+                }
+
+            }
+            //FIN PUNTO 4    
+            break;
+
+
+        case 5:
+            /* FUNCIONAMIENTO DEL MODO MANUAL */
+            if (Punto == 5) {
+                //DENTRO DE MODO MANUAL TECLA RETROCEDER - ACTUALIZAR
 
                 if (ESTADO_0 == 0 || ESTADO_0 == 1 || ESTADO_0 == 2 || ESTADO_0 == 3) {
                     EN_ESPERA = 0;
@@ -680,11 +958,13 @@ int main(void) {
                 if (SALIR_MANUAL == 1) {
                     switch (SK_C) {
                         case 1:
-                            if (RX_CHEKA != CHEK_A && TP1S == 0) { //CARTEL PULSAR RETROCEDER PARA SALIR
+                            if (RX_CHEKA != CHEK_A && !(tareas % 20)) { //CARTEL PULSAR RETROCEDER PARA SALIR
                                 generar_A(0x650edc, 0x0322, 0, 0);
+
                             }
                             if (RX_CHEKA == CHEK_A) { //
                                 CHEK_A = -1;
+                                tareas = 0;
                                 SK_C = 2;
                             }
                             break;
@@ -700,6 +980,7 @@ int main(void) {
                         SALIR_MANUAL = 0;
                         MODO = 0;
                         Punto = 3;
+                        tareas = 0;
                         SK_C = 0;
                         tabla_sk = 0;
                         ESTADO_0 = 0;
@@ -730,6 +1011,7 @@ int main(void) {
                         BANDERA_lluviamarch = 0;
                         BANDERA_molino = 0;
                         Larr = 1;
+
                         break;
                     }
                 }
@@ -761,11 +1043,12 @@ int main(void) {
 
 
 
+
                 // BORRADO DE SK Y  LETREROS DE ZONA
                 if (SALIR_MANUAL == 0) {
                     switch (SK_C) {
                         case 0:
-                            if (RX_CHEKA != CHEK_A && TP1S == 0) {//sk eo
+                            if (RX_CHEKA != CHEK_A && !(tareas % 20)) {//sk eo
                                 generar_A(0x650edc, 0x0300, 0, 0);
                             }
                             if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO BORRAR TODAS LAS SK
@@ -783,7 +1066,7 @@ int main(void) {
                 //--------------------------------------------------------------------------------------------------                         
                 ESTADO_0 = apagar_Q << 2 | apagar_M << 1 | apagar_P;
 
-                if (tabla_sk == 1 && TP10S == NP2S) {
+                if (tabla_sk == 1 && !(tareas % 50)) {
                     //  ESTADO 0=000
                     if (ESTADO_0 != ESTADO_1 && ESTADO_0 == 0 && BANDERA_ALARQUEM == 0 && BANDERA_ALARPRE == 0 && BANDERA_ALARMOL == 0) {
 
@@ -792,6 +1075,12 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650edc, 0x0333, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
+
                     } // FIN ESTADO 0=000
 
                     //  ESTADO 1=001             
@@ -800,6 +1089,10 @@ int main(void) {
                         AlarV = 1;
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650bdc, 0x0300, 0, 0);
+                        }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
                         }
                     } // FIN ESTADO 1=001
 
@@ -811,6 +1104,12 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650eac, 0x0300, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK2 APAGAR MOLINO
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
+
                     } // FIN ESTADO 2=010
 
 
@@ -821,6 +1120,13 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650bac, 0x0300, 0, 0);
                         }
+
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
+
                     } // FIN ESTADO 3=011
 
 
@@ -831,6 +1137,12 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650ed9, 0x0355, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
+
                     } // ESTADO 4=100                                  
 
 
@@ -841,6 +1153,13 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650bd9, 0x0300, 0, 0);
                         }
+
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
+
                     } // FIN ESTADO 5=101
 
 
@@ -851,6 +1170,12 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650ea9, 0x0300, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
+
                     } // FIN ESTADO 6=110
 
 
@@ -860,6 +1185,11 @@ int main(void) {
                         AlarV = 1;
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x650ba9, 0x0300, 0, 0);
+                        }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
                         }
                     } //FIN ESTADO 7
 
@@ -876,6 +1206,11 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x60f000, 0x0367, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
 
                     }
 
@@ -888,6 +1223,11 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x600000, 0x0367, 0, RES1);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
                     }
 
                     // ERROR EN EL QUEMADOR ENCENDIDO                       
@@ -898,6 +1238,11 @@ int main(void) {
 
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x600000, 0x0367, 0, RES1);
+                        }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
                         }
 
                     }
@@ -913,6 +1258,11 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x60f000, 0x0368, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
                     }
 
 
@@ -924,6 +1274,11 @@ int main(void) {
 
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x600000, 0x0368, 0, RES1);
+                        }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
                         }
                     }
                     //---------------------FIN ERRORES PRECALENTADOR --------------------------------------                        
@@ -938,6 +1293,11 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x60f000, 0x0369, 0, 0);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
                     }
 
                     if ((ESTADO_0 == 0 || ESTADO_0 == 2 || ESTADO_0 == 4 || ESTADO_0 == 6) && BANDERA_ALARMOL == 1 && BANDERA_HELPM == 1 && BANDERA_ALARPRE == 0 && BANDERA_ALARQUEM == 0) {
@@ -948,21 +1308,21 @@ int main(void) {
                         if (RX_CHEKA != CHEK_A) {
                             generar_A(0x600000, 0x0369, 0, RES1);
                         }
+                        if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO SK1 QUEMADOR
+                            CHEK_A = -1;
+                            ESTADO_1 = ESTADO_0;
+
+                        }
                     }
                     //---------------------FIN ERRORES MOLINO ------------------
 
-                    if (RX_CHEKA == CHEK_A) { //CONTROL DEL CHEKSUM ENVIADO
-                        CHEK_A = -1;
-                        ESTADO_1 = ESTADO_0;
-
-                    }
 
                 } // FIN ESTADO TABLA ESTADO                 
 
                 // FIN DE LA TABLA
 
 
-                if (num == 0 && tabla_sk == 1 && TP10S == 0) { //20
+                if (num == 0 && tabla_sk == 1 && !(tareas % 100)) { //20
                     ESTADO_1 = 10;
                     CHEK_A = -1;
                 }
@@ -977,6 +1337,7 @@ int main(void) {
                         SOFTK_A = 0;
                         SK_C = 0;
                         CHEK_A = -1;
+                        tareas = 0;
                         ESTADO_1 = 10;
                         SALIR_MANUAL = 0;
                         tabla_sk = 1;
@@ -1027,6 +1388,7 @@ int main(void) {
                 } //FIN SK1  
 
                 if (FINAL >= (tPIR1 + tPIR2 + tPIR3)) { // SE LLEGA AL TIEMPO MAXIMO TOTAL
+
                     SOFTK_A = 0;
                     APQ = 0;
                     reset_tiempoQ();
@@ -1171,27 +1533,30 @@ int main(void) {
 
 
 
+
                 /****************************MOLINO******************************************/
                 //PULSO TECLA  2 ENCENDER MOLINO DENTRO DE MANUAL                   
-                if ((SOFTK_N == 0) && (SOFTK_A == 2) && (apagar_M == 0) && (BANDERA_ALARMOL == 0) && (Lmarch == 0)) {
+                if ((SOFTK_N == 0) && (SOFTK_A == 2) && (apagar_M == 0) && (BANDERA_ALARMOL == 0) && (Lmarch == 0)) { //Lmarch == 1
                     SOFTK_A = 0;
                     num = 2;
-
-                    BANDERA_molino = 1;
-                    // FIN DE SK2  MOLINO 
-                }
-
-                if (BANDERA_molino == 1) {
-                    if ((SOFTK_N == 0) && (SOFTK_A == 1) && (apagar_M == 0) && (BANDERA_ALARMOL == 0) && (Lmarch == 0)) {
-                        SOFTK_A = 0;
-
+                    
+                    if (BANDERA_molino == 1){
                         aviso_Larr = 1;
                     }
-                    // FIN DE SK1  MOLINO
-                }
 
+                    BANDERA_molino = 1;
+                }// FIN DE SK2  MOLINO 
+                
+//                 if ((SOFTK_N == 0) && (SOFTK_A == 2) && (BANDERA_ALARMOL == 0) && (BANDERA_molino == 1) && (Lmarch == 0)) { //Lmarch == 1
+//                    SOFTK_A = 0;
+//
+//                    aviso_Larr = 1;
+//
+//                }// FIN DE SK1  MOLINO
+                
+                
                 // Si no se cumple la condicion de funcionamiento y esta en marcha, detiene el molino
-                if (Lmarch == 1 && !(PE2 == 1 && PE1 == 0)) {
+                if (Lmarch == 1 && !(PE2 == 1 && PE1 == 0)){
                     Larr = 1;
                     APM = 0;
                     apagar_M = 0;
@@ -1201,7 +1566,7 @@ int main(void) {
                     num = 0;
                     BANDERA_lluviamarch = 0;
                 }
-
+                
 
                 //PULSO TECLA 2 APAGAR MOLINO DENTRO DE MANUAL          
                 if ((SOFTK_N == 0) && (SOFTK_A == 2) && (apagar_M == 1) && (BANDERA_ALARMOL == 0)) {
@@ -1218,7 +1583,7 @@ int main(void) {
 
                 // FIN SOFTKEY SIN ALARMA           
 
-
+                
                 //-------- HAY UNA ALARMA ENCENDIDA----------------- 
                 if (SOFTK_A == 6 && SOFTK_N == 0 && (BANDERA_ALARMOL == 1)) {
                     SOFTK_A = 0;
@@ -1235,256 +1600,140 @@ int main(void) {
 
                 //------------------------------------------------------------------------           
 
-                if (APM == 1) { // TAREA ACTIVADA DEL MOLINO
+                if (APM == 1) // TAREA ACTIVADA DEL MOLINO
+                {
                     BANDERA_lluviamarch = 1;
 
                     //SE APAGO EL MOLINO
-                    //                    if (Lmarch == 0) {
-                    //                        APM = 0;
-                    //                        BANDERA_lluviamarch = 0;
-                    //                        apagar_M = 0;
-                    //                        aviso_Larr = 0;
-                    //                        BANDERA_molino = 0;
-                    //                        Larr = 1;
-                    //                        AlarS = 0;
-                    //                        num = 0;
-                    //                    }
+//                    if (Lmarch == 0) {
+//                        APM = 0;
+//                        BANDERA_lluviamarch = 0;
+//                        apagar_M = 0;
+//                        aviso_Larr = 0;
+//                        BANDERA_molino = 0;
+//                        Larr = 1;
+//                        AlarS = 0;
+//                        num = 0;
+//                    }
                 }
 
 
                 //*************************FIN MOLINO***********************************  
 
-                /* FIN DEL PUNTO 5*/
-                break;
-            default:
-                break;
-        }
-        //----------------- FIN DEL SISTEMA DE ARRANQUE---------------------------------
-
-    }// FINAL DE LA TAREA NO PERIODICA
 
 
-    return 0;
-}
+                // if(!(tareas%50 && DMA0REQbits.FORCE==0)) {
 
-/*INTERRUPCION TIMER2 10ms TAREA PERIODICA */
-void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
-
-    if (HAB == 1) {
-        pulso_watchdog();
-    }
-
-    if ((signal_emergencia == 1)) { // PULSADOR DE EMERGENCIA BORRAR TODAS LAS BANDERAS Y APAGAR MAQUINAS
-        __asm__ volatile ("reset "); //Instruccion de reinicio A LA SALIDA DE PARAMETROS    
-    }
-
-    // Lectura de Softkeys
-    SOFTK_N1 = (!SKC3) << 2 | (!SKC2) << 1 | (!SKC1);
-
-    if (SOFTK_A != SOFTK_N1) {
-        SOFTK_A = SOFTK_N;
-        SOFTK_N = SOFTK_N1;
-    }
-
-    // Habilitacion de Grua, ahora mismo sigue SERVOSON
-    Garr = SON;
-
-    // Timer de 1 segundo
-    if (TP1S == 0) {
-        TP1S = NP1K;
-    } else {
-        TP1S--;
-    }
-
-    //-------------- INICIO TAREA PERIODICA DE 10 SEGUNDOS  -------------------
-    if (TP10S == 0) {
-        TP10S = NP10K; // Reinicio contador
-    } else {
-        TP10S--; // Decremento contador
-    }
-
-    if (Punto > 2) { // Si sale de parametros
-        if (SOFTK_N == 5 || SOFTK_A == 5) {
-            SOFTK_A = 0;
-            YAC = 0;
-        }
-        if (YAC == 0) {
-            TP10S = NP10K;
-            PASADA = 0;
-        }
-
-        if (TP10S >= NP5K || PASADA == 0) {
-            SEL = 1;
-            if (TP10S == NP5K || YAC == 0) {
-                // Muestreo de seniales analogicas
-                for (int i = 0; i <= TAM_CONVERSOR - 1; i++)
-                    V[i + 4] = convierteAD(i);
-                ND = ND * a + V[4] * b;
-                PIR = PIR * a + V[5] * b;
-                TIB = TIB * a + V[6] * b;
-                TD = TD * a + V[7] * b;
-            }
-
-        } else if (TP10S < NP5K || PASADA == 1) {
-            SEL = 0;
-            if (TP10S == 0 || YAC == 0) {
-                // Muestreo de seniales analogicas
-                for (int i = 0; i <= TAM_CONVERSOR - 1; i++)
-                    V[i] = convierteAD(i);
-                ND = (ND * NDa + V[0] * NDb);
-                TIR = TIR * TIRa + V[1] * TIRb;
-                TIP = TIP * a + V[2] * b;
-                TCF = (TCF * a + V[3] * b);
-
-                //-------------- ACTUALIZACION VARIABLES ANALOG/DIGITALES  ------------------- 
-
-                LlaQuemador = apagar_Q; //__________________NF  DA[1]   LLama de quemador+Fuego Horno+ Cartel
-                REhorno = (TIR <= TCCORT_MUL2) ? 1 : 0; //__NF  DA[0]   Reactor en el horno 
-                AlarV = Alarma_verde; //____________________NF  DA[2]   Alarma Verde
-                REbasc = (TIB <= TCCORT_MUL2) ? 1 : 0; //___NF  DA[3]   Reactor en estacion Basc  
-                REpc = (TIP <= TCCORT_MUL2) ? 1 : 0; //_____NF  DA[4]   Reactor en estacion PreC
-                Ctl_Llama = apagar_P; //____________________NF  DA[5]   Cartel estacion PreC
-                Cesto_0 = (!PE1) && (PE2); //_______________NF  DA[6]   COndicion Cesto
-                Cesto_1 = (!PE2) && (!PE1); //______________NF  DA[7]   COndicion Cesto
-                Molino_march = BANDERA_lluviamarch; //______NF  DA[8]   
-                BombaM_march = !LBA; //_____________________NF  DA[9]   COndicion Cesto  
-                AlarR = Alarma_roja; //_____________________NF  DA[13]   Alarma Roja
-
-                BANDERA_HELPQNDmax = ((float) ND >= NCMAX) ? 1 : 0; //no se puede realizar mas ciclos deposito lleno
-                BANDERA_HELPQNDmin = ((float) ND < NCMIN) ? 1 : 0; // falta nivel para realizar pirolisis
-                BANDERA_HELPQTCF = !QOK;
-
-                TP10S = NP10K; // Reinicio contador
-            }
-        }
-
-        DA = AlarR << 13 | EN_ESPERA << 10 | MODO_MANUAL << 11 | EN_CICLO << 12 | BombaM_march << 9 | Molino_march << 8 | Cesto_1 << 7 | Cesto_0 << 6 | Ctl_Llama << 5 | REpc << 4 | REbasc << 3 | AlarV << 2 | LlaQuemador << 1 | REhorno;
-        generar_A(0x650321, 0x0100, 1, 0);
-
-        if (PASADA == 0) {
-            PASADA = 1;
-        } else if (PASADA == 1) {
-            YAC = 1;
-        }
-    }
-    //-------------- FIN TAREA PERIODICA DE 10S Y ACTUALIZACION VARIABLES ANALOG/DIGITAL  -------------------
+                // TIP=TIRN; // PARA PROBAR APQ LUEGO BORRAR
 
 
+                // CHEK_A=(TIR+PIR+ApSApSV+tCIC+TIB+TIP+TCF+TD+ND+00+DA+DB+ET+tETAP+FINAL)&(0x00FF);
+                //datos    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21      = caracteres 65
 
-    switch (Punto) {
-        case 0:
-            /* INICIO DE PUNTO 0 */
-            /* ENVIO EL CHSUM DE LA TABLA DE PARAMETROS CAMBIO A PANTALLA 2  */
-            if (TP1S == 0) {
-                if (RX_CHEKC != CHEK_C && DMA0REQbits.FORCE == 0) {
-                    sprintf(aux_dma_tx, "C=%.2x%.2x%.2x\n", 1, CHEK_P, CHEK_C); // ME DEVUELVE LO QUE YO LE ENVIO COMO CHEK_P
-                    cargar_DMA_C(aux_dma_tx);
-                    enviar_DMA();
-                }
-                if (RX_CHEKC == CHEK_C) {
-                    RX_CHEKC = 0;
-                    CHEK_A = -1; // si se corta elmensaje manda H=0 OJO
-                    SK_C = 0;
-                }
-            }
-            /* FIN DE PUNTO 0 */
-            break;
-
-        case 1:
-            /* INICIO DEL PUNTO 1 PANTALLA ARRANQUE Y LETREROS ESTADOS */
-            if (TP1S == 0) {
-                if (SK_C == 0) {
-                    if (RX_CHEKA != 49) { //CONTROL DE LOS CHEK ENVIADO
-                        cargar_DMA_A("A=00000000000000000000000000000000000000001110000000000000200031\n");
-                        enviar_DMA();
-
-                    }
-                    if (RX_CHEKA == 49) {
-                        SK_C = 1;
-                        CHEK_A = -1;
-                    }
-                }
-            }
-            /* FIN DEL PUNTO 1*/
-            break;
-
-        case 2:
-            /* INICIO DEL PUNTO 2 PANTALLA PARAMETROS */
-            if (TP1S == 0) {
-                if (RX_CHEKA != CHEK_A) {//sk eo
-                    generar_A(0x000000, 0x0000, 0, 0);
-                }
-            }
-            /* FIN DEL PUNTO 2*/
-            break;
-
-        case 3:
-            /* INICIO DEL PUNTO 3 (SE ACCIONO SERVOS) PASA A PANTALLA PPAL*/
-
-            //IMPRESION LETREROS SELECCION AUTOMATICO-MANUAL-PARAMETROS-ACTUALIZAR-RETROCEDER
-            Alarma_verde = 1;
-            EN_ESPERA = 1;
-            MODO_MANUAL = 0;
-            EN_CICLO = 0;
-            DA = AlarR << 13 | EN_ESPERA << 10 | MODO_MANUAL << 11 | EN_CICLO << 12 | BombaM_march << 9 | Molino_march << 8 | Cesto_1 << 7 | Cesto_0 << 6 | Ctl_Llama << 5 | REpc << 4 | REbasc << 3 | AlarV << 2 | LlaQuemador << 1 | REhorno;
+                // sprintf(aux_dma_tx,"A=%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.2x%.3x%.3x%.4x%.4x%.3x%.3x%.3x%.3x%.3x%.2x%.2x\n",
+                //        TIR,PIR,ApSApSV,tCIC,TIB,TIP,TCF,TD,ND,ET,tETAP,FINAL,DA,DB,RES1,RES2,RES3,RES4,RES5,00,CHEK_A);
+                //         if(RX_CHEKA!=CHEK_A && DMA0REQbits.FORCE==0){     
+                //           cargar_DMA_A(aux_dma_tx);
+                //         enviar_DMA();
+                //       tareas=0;
 
 
-            // IMPRESION DE  LETREROS DE LAS SOFTKEY
-            if (SK_C == 0) {
-                /* SE PASA A PANTALLA PRINCIPAL Y SE IMPRIMEN SOFTKEY */
-                if (RX_CHEKA != CHEK_A && (TP1S == 0)) {
-                    generar_A(0x650321, 0x0100, 1, 0);
-                }
+                //        }//TIEMPO DE ENVIO 4 SEG
 
-                if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO CAMBIO DE PANTALLA
-                    CHEK_A = -1;
-                    SK_C = 1;
-                    Punto = 4;
-                }
-            }
-            /* FIN DEL PUNTO 3*/
-            break;
 
-        case 4:
-            /* INICIO DEL PUNTO 4*/
-            //ESPERANDO COMANDO - MANUAL- AUTOMATICO- ACTUALIZAR
+                // }          
+                /* NOOOO VAAAA  -------------------------------------------------------------------
+                       // ACTUALIZA CON TECLA         
+              if( (SOFTK_N==5) && (SOFTK_A==5)  && !(tareas%20) ){
+              CHEK_A=(TIR+PIR+ApSApSV+tCIC+TIBasc+TIPC+TCF+TD+ND+0+DA+DB+ET+tETAP+FINAL)&(0x00FF);
+                             //datos    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21      = caracteres 65
+               sprintf(aux_dma_tx,"A=%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.2x%.3x%.3x%.4x%.4x%.3x%.3x%.3x%.3x%.3x%.2x%.2x\n",
+                       TIR,PIR,ApSApSV,tCIC,TIBasc,TIPC,TCF,TD,ND,ET,tETAP,FINAL,DA,DB,RES1,RES2,RES3,RES4,RES5,0,CHEK_A);
+               if(RX_CHEKA != CHEK_A){
+                            cargar_DMA_A(aux_dma_tx);
+                            enviar_DMA();
+                            tareas=0;
+                            SOFTK_N=0;
+                                      }
+                 
+                                                                         }
+                 */
 
-            // TECLA RETROCEDER SK 6
-            if (SOFTK_A == 6 && SOFTK_N == 0) {
-                SOFTK_A = 0;
-                SK_C = 0;
-                Punto = 0;
-            }
+                //finaliza PUNTO 5     
 
-            // ENVIO DE MSJ ACTUALIZACION DE PANTALLA CADA 10 SEGUNDOS
-            if (TP10S == 0) {
-                DA = AlarR << 13 | EN_ESPERA << 10 | MODO_MANUAL << 11 | EN_CICLO << 12 | BombaM_march << 9 | Molino_march << 8 | Cesto_1 << 7 | Cesto_0 << 6 | Ctl_Llama << 5 | REpc << 4 | REbasc << 3 | AlarV << 2 | LlaQuemador << 1 | REhorno;
-                generar_A(0x650321, 0x0100, 1, 0);
-            }
+                /* A PARTIR DE AQUI EL PROCESO ENTRA EN MODO PRODUCCION SIN POSIBILIDAD DE ENTRAR EN PARAMETROS */
 
-            // TECLA ACTUALIZAR SK 5    
-            if (SOFTK_A == 5 || SOFTK_N == 0) {
-                SOFTK_A = 0;
-                //generar_A(0x650321, 0x0100, 1, 0);
-            }
 
-            //TECLA SK 3 MODO MANUAL
-            if (SOFTK_A == 3 && SOFTK_N == 0) { // PRESIONO SK 3- ELIJO MODO MANUAL
-                SOFTK_A = 0;
-                SOFTK_N = 0;
-                Punto = 5; //MODO MANUAL
-                MODO = 2; // TAREA NO PERIODICA ENTRA EN MANUAL
-                SK_C = 0;
-                ESTADO_0 = 0;
-                tabla_sk = 0;
-            }
-            /* FIN DEL PUNTO 4*/
+                /*
+                   if(Punto==13){  // ->SI ESTA EN CICLO 
+                      tareas++; // variable tarea (cuenta ticks) t=10ms
+                         if(!(tareas%2)) {
+                    
+                            if(SEL==1){
+                                      for(i=0;i<=TAM_CONVERSOR-1;i++)     
+                                      V[i]=convierteAD(i);
+                                      operando_b=(double)V[1]*b;
+                                      operando_a=VF_anterior*a;
+                                      SEL^=1;    
+                  
+                                      }
+                                  else
+                                {
+                   
+                                for(i=0;i<=TAM_CONVERSOR-1;i++)     
+                                V[i+4]=convierteAD(i);
+                                operando_b=(double)V[1]*b;
+                                operando_a=VF_anterior*a;
+                                  SEL^=1;
+                   
+                                  }     
+                                                   }   
+                       
+       
+        
+                       if(!(tareas%4)){
+            
+                                VF_actual=operando_a+operando_b;  
+                                VF_anterior=VF_actual;
+                                VF_actual=VF_actual/2;
+                                      }
+                       
+                    
+   
+                       if(!(tareas%98)){
+     
+                            //   sprintf(aux_dma_tx,"h1:%.2f,%d\n",VF_actual,V[1]);
+               //control  1   2     3      4    5     6    7   8  9      10      11 12 
+                   CHEK_A=(TIR+PIR+ApSApSV+tCIC+TIBasc+TIPC+TCF+TD+ND+00+DA+DB+ET+tETAP+FINAL)&(0x00FF);
+                                 //datos    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16 17   = caracteres 48
+                   sprintf(aux_dma_tx,"A=%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.2x%.3x%.3x%.2x%.4x%.4x%.2x\n",
+                           TIR,PIR,ApSApSV,tCIC,TIBasc,TIPC,TCF,TD,ND,ET,tETAP,FINAL,00,DA,DB,CHEK_A);
+                             }
+                           //sprintf(aux_dma_tx,"A=%d  \n",SOFTK_ACTUAL );
+        
+                      if(!(tareas%99)){    
+                      cargar_DMA_A(aux_dma_tx);
+                        
+                                      } 
+       
+                       if(!(tareas%100)){
+                                enviar_DMA();
+                                tareas=0;
+                       }
+                              
+                 */
+
+            } // FINAL DE PUNTO 5
+
+
             break;
 
         default: break;
+
     }
 
     IFS0bits.T2IF = 0; // Clear Timer1 Interrupt Flag
+
     return;
 }
 
