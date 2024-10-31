@@ -1,5 +1,9 @@
+#include "p33Fxxxx.h"
+#include <xc.h>
+#include <stdint.h>            //Includes uint16_t definition                    
+#include <stdbool.h>           //Includes true/false definition          
+#include <stdio.h>
 #include "configuraciones.h"
-#include "hardware.h"
 #include "constantes.h"
 
 /*
@@ -59,6 +63,8 @@ _FOSCSEL(FNOSC_FRC & IESO_ON) //Internal Fast RC (FRC) y  Start up with FRC, the
 //                              Configura I/O                                 //
 //----------------------------------------------------------------------------//
 
+//extern char dato_Rx[TAM_Rx];
+
 void configurarEntradasSalidas(void) {
     //Definicion de entradas y salidas
     //*********************  P U E R T O   A  **************************************
@@ -93,7 +99,7 @@ void configurarEntradasSalidas(void) {
     //                                                                      | || SLAVE SPI    
 
     TRISF = 0xCFCC; //Entrada = 1, Salida = 0:     TRIS_F = 1100 1111 1100 1100
-    
+
     //*********************  P U E R T O   G  **************************************    
     TRISG = 0x0C30; //Entrada = 1, Salida = 0: TRIS_G = 0000 1100 0011 0000
 
@@ -110,11 +116,13 @@ void configurarEntradasSalidas(void) {
 //                       W A T C H D O G   -   P L L                          //
 //----------------------------------------------------------------------------//
 //-------------  Deshabilita watchdog
+
 void WDT_disable() {
     RCONbits.SWDTEN = 0; /* Disable Watch Dog Timer*/
 }
 
 //-------------  Deshabilita watchdog, configura PLL
+
 void configurarSistema() {
     WDT_disable();
     configurarPLL();
@@ -122,6 +130,7 @@ void configurarSistema() {
 }
 
 //-------------  Configura PLL
+
 void configurarPLL(void) {
     PLLFBD = PLLFBD_M; // M = PLLFBD_ + 2 = 47
     CLKDIVbits.PLLPOST = PLLPOST_N1; // N1 = PLLPOST_N1 + 2 = 2
@@ -159,10 +168,14 @@ void inicializaPrioridadInterrupciones(void) {
     IPC0bits.T1IP = 0; //Timer1 Interrupt priority level
 
     //UART
-    IPC2bits.U1RXIP = 0; //UART Interrupt priority level
+    IPC2bits.U1RXIP = 4; //UART Interrupt priority level
 
-    //TIMER 3
-    IPC2bits.T3IP = 0; //TIMER 3 y 2 Interrupt priority level
+    //TIMER 2
+    IPC1bits.T2IP = 6; //TIMER 2 Interrupt priority level
+
+    //DMA
+    IPC1bits.DMA0IP = 5; // Configura prioridad 5 para DMA0
+    IPC3bits.DMA1IP = 3; // Configura prioridad 3 para DMA1
 
     //QEI
     IPC14bits.QEIIP = 0; //QEI Interrupt Priority bits
@@ -232,41 +245,23 @@ void inicializaADC(void) {
 //                              Inicializa UART                               // 
 //----------------------------------------------------------------------------//
 
-void inicializaUART(int BRGVAL) {
+void inicializaUART(int BAUDIOS) {
 
-    /*
-    U1MODEbits.STSEL = 0;           //Stop Bit: 0=1 Stot bit - 1=2 stop bits
-    U1MODEbits.PDSEL = 0;           //Parity Bits: 00=8 bit data, No Parity
-    U1MODEbits.ABAUD = 0;           //Auto-Baud
-    U1MODEbits.BRGH = 0;            //Standard Speed Mode
-    U1BRG = BRGVAL;                 //Set Baud Rate
-    U1STAbits.UTXISEL0 = 0;         //Interrupcion despues de TX un caracter
-    U1STAbits.UTXISEL1 = 0;
-    IEC0bits.U1TXIE = 1;            //Habilita Interrupcion de TX
-    IFS0bits.U1RXIF = 0;            //Reset RX Inerrupt Flag
-    //IPC2bits.U1RXIP = 2;            //Set priority
-    U1STAbits.URXISEL = 0;          //Interrumpe despues de recibir un caracter   *
-    U1STAbits.UTXEN = 1;            //Habilita UART para TX
-    IEC0bits.U1RXIE = 1;          //Habilita UART para RX                         *
-    U1STAbits.URXISEL = 0;      // Interrupt after one RX character is received;
-    U1MODEbits.UARTEN = 1;          //Habilita UART
-     */
-
-    /*DMA UART TX-RX */
+    U1MODEbits.UARTEN = 0; // Desactivar UART antes de configurar
     U1MODEbits.STSEL = 0; // 1-stop bit
     U1MODEbits.PDSEL = 0; // No Parity, 8-data bits
     U1MODEbits.ABAUD = 0; // Autobaud Disabled
+    U1BRG = BAUDIOS; // Configuración de la velocidad en baudios
 
-    U1BRG = BRGVAL; // BAUD Rate Setting for 115200
-
-    U1STAbits.UTXISEL0 = 0; // Interrupt after one Tx character is transmitted
+    U1STAbits.UTXISEL0 = 0; // Interrupción en cada carácter transmitido
     U1STAbits.UTXISEL1 = 0;
+    U1STAbits.URXISEL = 0b10; // Interrupción cuando el FIFO RX está lleno
 
-    U1STAbits.URXISEL = 0; // Interrupt after one RX character is received
-    IEC0bits.U1RXIE = 1; //Habilita UART para RX agregue
-    IFS0bits.U1RXIF = 0; //Reset RX Inerrupt Flag agregue
-    U1MODEbits.UARTEN = 1; // Enable UART
-    U1STAbits.UTXEN = 1; // Enable UART Tx
+    IEC0bits.U1RXIE = 1; // Habilita la interrupción de RX
+    IFS0bits.U1RXIF = 0; // Reinicia la bandera de interrupción de RX
+
+    U1STAbits.UTXEN = 1; // Habilita UART Tx
+    U1MODEbits.UARTEN = 1; // Habilita UART
 }
 //-----------------------  Fin inicializa UART  ------------------------------//
 
@@ -276,25 +271,66 @@ void inicializaUART(int BRGVAL) {
 // 
 //----------------------------------------------------------------------------//
 
-void inicializaDMA() {
+void inicializaDMA_TX() {
     extern unsigned int BufferA[TAM_DMA] __attribute__((space(dma)));
 
-    /*CONFIGURACION DMA  */
     DMA0CON = 0x2001; // One-Shot, Post-Increment, RAM-to-Peripheral
-    DMA0CNT = (TAM_DMA - 1); //CNT=7 PARA  8 DMA requests
-    DMA0REQ = 0x000C; // Select UART1 Transmitter
+    DMA0CNT = TAM_DMA - 1; // Tamaño del buffer
+    DMA0REQ = 0x001F; // UART1 TX
     DMA0PAD = (volatile unsigned int) &U1TXREG;
     DMA0STA = __builtin_dmaoffset(BufferA);
-    IFS0bits.DMA0IF = 0; // Clear DMA Interrupt Flag
-    IEC0bits.DMA0IE = 1; // Enable DMA interrupt
 
+    IFS0bits.DMA0IF = 0;
+    IEC0bits.DMA0IE = 1; // Interrupción de DMA habilitada
+    DMA0CONbits.CHEN = 1; // Habilita el canal DMA1
+}
+
+void inicializaDMA_RX() {
+    extern unsigned int BufferB[TAM_DMA] __attribute__((space(dma)));
+
+    DMA1CON = 0x0000; // RAM-to-RAM, Post-Increment
+    DMA1CNT = TAM_DMA - 1; // Tamaño del buffer
+    DMA1REQ = 0x001E; // UART1 RX
+    DMA1PAD = (volatile unsigned int) &U1RXREG;
+    DMA1STA = __builtin_dmaoffset(BufferB);
+
+    IFS0bits.DMA1IF = 0;
+    IEC0bits.DMA1IE = 1; // Interrupción de DMA habilitada
+    DMA1CONbits.CHEN = 1; // Habilita el canal DMA1
 }
 //-----------------------  Fin inicializa DMA  ------------------------------//
 
-/* INTERRUPCION DMA */
-void __attribute__((__interrupt__, no_auto_psv)) _DMA0Interrupt(void) {
-    IFS0bits.DMA0IF = 0; // Clear the DMA0 Interrupt Flag;
+extern volatile int found;
+extern unsigned int RX_CHEKA;
+extern unsigned int BufferB[TAM_DMA] __attribute__((space(dma)));
+
+void procesar_mensaje(void) {
+    if (found) {
+        found = 0; // Resetea la bandera
+        int i = 2; // Inicia desde el tercer byte
+
+        // Busca el final del mensaje para extraer el checksum
+        while (i < TAM_DMA && BufferB[i] != '\n') {
+            i++;
+        }
+
+        // Si llegamos al final del buffer sin encontrar '\n', no procesamos más
+        if (i < TAM_DMA) {
+            // i ahora apunta a la posición de '\n', entonces el checksum está en (i-3) y (i-2)
+            if (i >= 3 && BufferB[i - 3] == '0' && BufferB[i - 2] == 'x') {
+                unsigned char hex1 = BufferB[i - 1];
+                unsigned char hex2 = BufferB[i - 2];
+
+                // Convertimos los caracteres hexadecimales a un valor
+                unsigned char value1 = (hex1 >= '0' && hex1 <= '9') ? hex1 - '0' : (hex1 >= 'A' && hex1 <= 'F') ? hex1 - 'A' + 10 : hex1 - 'a' + 10;
+                unsigned char value2 = (hex2 >= '0' && hex2 <= '9') ? hex2 - '0' : (hex2 >= 'A' && hex2 <= 'F') ? hex2 - 'A' + 10 : hex2 - 'a' + 10;
+
+                RX_CHEKA = (value2 << 4) | value1; // Combina los dos valores
+            }
+        }
+    }
 }
+
 
 //-----------------------  Fin interrupcion DMA  ------------------------------//
 

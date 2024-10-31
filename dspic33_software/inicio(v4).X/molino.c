@@ -49,6 +49,8 @@ extern unsigned long int rx_enviar;
 extern unsigned int TP1S;
 extern unsigned int molinoloop;
 
+extern char aux_dma_tx[TAM_DMA]; // VARIABLE AUXILIAR PARA CARGAR EN DMA
+
 void Molino() {
     tabla_sk = 0;
     CHEK_A = -1; // si se corta elmensaje manda H=0 OJO
@@ -199,8 +201,8 @@ void Molino() {
             }
 
             //            if (TP1S == 0) {
-            //MENSAJE EN PROCESO DE ENCENDIDO
-            generar_A(0x650000, 0x1900, 0, 0);
+            
+            generar_A(0x650000, 0x1900, 0, 0); //MENSAJE EN PROCESO DE ENCENDIDO
 
             if (strncmp(dato_Rx, "H=", 2) == 0)
                 sscanf(dato_Rx, "H=%2x", &RX_CHEKA);

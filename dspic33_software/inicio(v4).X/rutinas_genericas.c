@@ -1,9 +1,4 @@
-/*
- * File:   rutinas_genericas.c
- * Author: Ing. Daniel Petrone
- *
- * Created on 3 de abril de 2023
- */
+
 #include "p33Fxxxx.h"
 #include <xc.h>
 #include <stdint.h>            //Includes uint16_t definition                    
@@ -88,46 +83,30 @@ void getsUART1(unsigned char *r) {
 //******************************************************************************
 
 void enviar_DMA(void) {
-    if (DMA0REQbits.FORCE == 0) {
-        DMA0CONbits.CHEN = 1; // Enable DMA 
-        DMA0REQbits.FORCE = 1; // Manual mode: Kick-start the 1st transfer  
-
+    if (!DMA0REQbits.FORCE) {
+        DMA0CONbits.CHEN = 1; // Habilita el canal DMA
+        DMA0REQbits.FORCE = 1; // Inicia la primera transferencia de forma manual
     }
-
-    return;
 }
 
-void cargar_DMA_A(char *enviar) {
+void cargar_DMA_A(const char *enviar, unsigned int longitud) {
     extern unsigned int BufferA[TAM_DMA] __attribute__((space(dma)));
-    DMA0CNT = (TAM_DMA - 1); //CNT=7 PARA  8 DMA requests
     int h;
-    //PONE A CERO EL BUFFER DE LA DMA
-    for (h = 0; h <= (TAM_DMA - 1); h++) {
+
+    // Asegurarse de que el tamaño no supere el del buffer DMA
+    if (longitud > TAM_DMA) {
+        longitud = TAM_DMA;
+    }
+
+    // Limpia el buffer de DMA para evitar residuos
+    for (h = 0; h < TAM_DMA; h++) {
         BufferA[h] = 0;
     }
-    //CARGA  EL BUFFER DE LA DMA
-    for (h = 0; h <= (TAM_DMA - 1); h++) {
+
+    // Carga el buffer de DMA con los datos a enviar
+    for (h = 0; h < longitud; h++) {
         BufferA[h] = enviar[h];
     }
-
-    return;
-}
-//sobrecarga de funciom cargar_DMA_A para enviar 8 caracteres
-
-void cargar_DMA_C(char *enviar) {
-    extern unsigned int BufferA[TAM_DMA] __attribute__((space(dma)));
-    DMA0CNT = 9; //CNT=7 PARA  8 DMA requests
-    int h;
-    //PONE A CERO EL BUFFER DE LA DMA
-    for (h = 0; h <= (TAM_DMA - 1); h++) {
-        BufferA[h] = 0;
-    }
-    //CARGA  EL BUFFER DE LA DMA
-    for (h = 0; h <= (TAM_DMA - 1); h++) {
-        BufferA[h] = enviar[h];
-    }
-
-    return;
 }
 
 

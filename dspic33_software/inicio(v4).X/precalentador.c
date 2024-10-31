@@ -41,16 +41,17 @@ extern char dato_Rx[TAM_Rx];
 extern bool APP;
 extern bool apagar_P;
 extern unsigned long int rx_enviar;
+extern char aux_dma_tx[TAM_DMA]; // VARIABLE AUXILIAR PARA CARGAR EN DMA
 
 extern unsigned int RES1;
 
+extern unsigned int precalloop;
+extern unsigned int TP1S;
+
 void Precalentador() { //MANEJO DEL PREQUEMADOR Y DE IMPRESIONES
-    int i = 0;
-    int seg = 0;
+
     tabla_sk = 0;
     CHEK_A = -1; // si se corta elmensaje manda H=0 OJO
-
-
 
 
     if (REpc == 0) {
@@ -58,176 +59,144 @@ void Precalentador() { //MANEJO DEL PREQUEMADOR Y DE IMPRESIONES
         PCarr = 1;
         num = 0;
         BANDERA_ALARPRE = 1;
-        ESTADO_1 = 99;
         CHEK_A = -1;
         RES1 = 6; // COLOCAR AVISO NO HAY REACTOR PRE
         tabla_sk = 1;
 
     }
-    
-
 
 
     if (REpc == 1) { // HAY REACTOR EN EL PRE CALENTADOR
 
-        do {
+        if (!aviso_Parr) {
 
+            if (!TP1S) {
+                // MENSAJE ENCENDER PRE CALENTADOR
+                generar_A(0x650800, 0x0600, 0, 0);
 
-            // MENSAJE ENCENDER PRE CALENTADOR
-
-            __delay_ms(20);
-            generar_A(0x650800, 0x0600, 0, 0);
-            __delay_ms(20);
-            i++;
-
-
-            if (strncmp(dato_Rx, "H=", 2) == 0)
-                sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
-
-
-            if (RX_CHEKA == CHEK_A)
-                break;
-
-            if (i == 5) {
-                break;
+                if (BANDERA_RETROCERP == 1) {
+                    num = 0;
+                    AlarS = 0;
+                    aviso_Parr = 0;
+                    BANDERA_precalentador = 0;
+                    apagar_P = 0;
+                    BANDERA_ALARPRE = 1;
+                    CHEK_A = -1;
+                    tabla_sk = 1;
+                    BANDERA_RETROCERP = 0;
+                    return;
+                }
             }
 
-        } while (RX_CHEKA == CHEK_A || i == 5);
-
-        i = 0;
-
-        do {
-
-
-            if (BANDERA_RETROCERP == 1) {
-                num = 0;
-                break;
-            }
             // ESPERANDO TECLA SK - ENCENDER- ACTUALIZAR- RETORNAR
-            if (TP10S == NP5S)
+            if (TP10S == NP5S) {
                 BANDERA_ACTUALIZAP = 1;
 
-            //SK ACTUALIZAR CONDICION BANDERA NUM=1 ,BANDERA tabla_sk  =0
-            if (BANDERA_ACTUALIZAP == 1) {
-
-                __delay_ms(100);
-                generar_A(0x650800, 0x0600, 0, 0);
-                __delay_ms(100);
-
-
-
-                BANDERA_ACTUALIZAP = 0;
-
+                //SK ACTUALIZAR CONDICION BANDERA NUM=1 ,BANDERA tabla_sk  =0
+                if (BANDERA_ACTUALIZAP == 1) {
+                    generar_A(0x650800, 0x0600, 0, 0);
+                    BANDERA_ACTUALIZAP = 0;
+                }
             }
-
-
-        } while (aviso_Parr == 0);
-
-        i = 0;
-        CHEK_A = -1;
-
-        if (BANDERA_RETROCERP == 0)
-            PCarr = 0; // ENCENDER RELEE    
-
-        do {
-            if (BANDERA_RETROCERP == 1) {
-                num = 0;
-                break;
-            }
-
-
-            __delay_ms(20);
-            generar_A(0x650000, 0x1700, 0, 0);
-            __delay_ms(20);
-            i++;
-            if (strncmp(dato_Rx, "H=", 2) == 0)
-                sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
-
-
-            if (RX_CHEKA == CHEK_A)
-                break;
-            if (i == 5) {
-                break;
-            }
-        } while (RX_CHEKA == CHEK_A || i == 5);
-
-        CHEK_A = -1;
-        i = 0;
-        //EN PROCESO DE ENCENDIDO
-        do {
-
-            if (BANDERA_RETROCERP == 1) {
-                num = 0;
-                break;
-            }
-
-
-            if (BANDERA_ACTUALIZAP == 1) {
-                __delay_ms(100);
-                generar_A(0x650000, 0x1700, 0, 0);
-                __delay_ms(100);
-                BANDERA_ACTUALIZAP = 0;
-            }
-
-            __delay_ms(100); // NO USAR  
-            i++;
-
-            if (i == 10) {
-                seg += 1;
-                i = 0;
-            }
-
-
-
-            if (dR == seg) {
-                PCarr = 1;
-                aviso_Parr = 0;
-                BANDERA_precalentador = 0;
-                num = 0;
-                apagar_P = 0;
-                BANDERA_ALARPRE = 1;
-                ESTADO_1 = 99;
-                CHEK_A = -1;
-                RES1 = 7;
-                tabla_sk = 1;
-
-                break; // RETORNAR 
-            }
-
-            //ESPERANDO SEÑAL DEL QUEMADOR SK- ACTUALIDAR- RETORNAR 
-
-        } while ((!PCmarch) != 1);
-
-        if (seg < dR && BANDERA_RETROCERP == 0) {
-            APP = 1;
-            apagar_P = 1;
-            tabla_sk = 1;
-            num = 0;
+            CHEK_A = -1;
         }
 
 
-    } //FIN IF REACTOR HORNO
+        if (aviso_Parr) {
 
-    if (BANDERA_RETROCERP == 1) {
-        PCarr = 1;
-        aviso_Parr = 0;
-        BANDERA_precalentador = 0;
-        num = 0;
-        apagar_P = 0;
-        BANDERA_ALARPRE = 1;
-        ESTADO_1 = 99;
-        CHEK_A = -1;
-        tabla_sk = 1;
+            if (BANDERA_RETROCERP == 1) {
+                num = 0;
+                AlarS = 0;
+                aviso_Parr = 0;
+                BANDERA_precalentador = 0;
+                apagar_P = 0;
+                BANDERA_ALARPRE = 1;
+                CHEK_A = -1;
+                tabla_sk = 1;
+                BANDERA_RETROCERP = 0;
+                return;
+            }
+
+            generar_A(0x650000, 0x1700, 0, 0); // MENSAJE EN PROCESO DE ENCENDIDO
+
+            CHEK_A = -1;
+
+            //Comienza Rutina de Arranque: EN PROCESO DE ENCENDIDO
+
+            if (aviso_Parr) {
+
+                if (BANDERA_RETROCERP == 1) {
+                    num = 0;
+                    AlarS = 0;
+                    aviso_Parr = 0;
+                    BANDERA_precalentador = 0;
+                    apagar_P = 0;
+                    BANDERA_ALARPRE = 1;
+                    CHEK_A = -1;
+                    tabla_sk = 1;
+                    BANDERA_RETROCERP = 0;
+                    return;
+                }
+
+                if (BANDERA_ACTUALIZAP == 1) {
+                    generar_A(0x650000, 0x1700, 0, 0);
+                    BANDERA_ACTUALIZAP = 0;
+                }
+
+
+                if (precalloop >= (dR * 100)) {
+                    if (!PCmarch) {
+                        PCarr = 1;
+                        aviso_Parr = 0;
+                        BANDERA_precalentador = 0;
+                        num = 0;
+                        apagar_P = 0;
+                        APP = 0;
+                        BANDERA_ALARPRE = 1;
+                        CHEK_A = -1;
+                        RES1 = 5; // ERROR EN EL TIEMPO
+                        tabla_sk = 1;
+                        precalloop = 0;
+                        return;
+                    } else {
+                        aviso_Parr = 0;
+                        BANDERA_precalentador = 0;
+                        num = 0;
+                        apagar_P = 1;
+                        APP = 1;
+                        BANDERA_ALARPRE = 0;
+                        CHEK_A = -1;
+                        RES1 = 0; // NO ERRORES
+                        tabla_sk = 1;
+                        precalloop = 0;
+                        return;
+                    }
+                } else if ((precalloop >= 500) && (precalloop < (dR * 100))) {
+                    Qarr = 0;
+                } else if (precalloop < 500) {
+                    sonido_2(precalloop);
+                }
+            }
+
+        } /*FIN del Ciclo de Encendido PRECALENTADOR*/
+
+        if (BANDERA_RETROCERP == 1) {
+            PCarr = 1;
+            aviso_Parr = 0;
+            BANDERA_precalentador = 0;
+            num = 0;
+            apagar_P = 0;
+            BANDERA_ALARPRE = 1;
+            CHEK_A = -1;
+            tabla_sk = 1;
+            BANDERA_RETROCERP = 0;
+            return;
+        }
+
+        return;
     }
 
-    BANDERA_RETROCERP = 0;
 
 
-    return;
+
 }
-
-
-
-
-
-

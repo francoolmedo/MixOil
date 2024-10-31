@@ -1,14 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
-    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="10">
+        <file>
+            <url>main.c</url>
+            <bookmark id="7">
+                <name/>
+                <line>464</line>
+                <key/>
+            </bookmark>
+            <bookmark id="6">
+                <name/>
+                <line>515</line>
+                <key/>
+            </bookmark>
+            <bookmark id="5">
+                <name/>
+                <line>551</line>
+                <key/>
+            </bookmark>
+            <bookmark id="4">
+                <name/>
+                <line>583</line>
+                <key/>
+            </bookmark>
+            <bookmark id="3">
+                <name/>
+                <line>608</line>
+                <key/>
+            </bookmark>
+            <bookmark id="2">
+                <name/>
+                <line>647</line>
+                <key/>
+            </bookmark>
+            <bookmark id="8">
+                <name/>
+                <line>759</line>
+                <key/>
+            </bookmark>
+            <bookmark id="9">
+                <name/>
+                <line>864</line>
+                <key/>
+            </bookmark>
+            <bookmark id="1">
+                <name/>
+                <line>1051</line>
+                <key/>
+            </bookmark>
+            <bookmark id="10">
+                <name/>
+                <line>1153</line>
+                <key/>
+            </bookmark>
+        </file>
+    </editor-bookmarks>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/parametrizacion.c</file>
+            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/configuraciones.h</file>
+            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/pulso_watch.c</file>
+            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/recepcion_serie.c</file>
             <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/generar_palabra_A.c</file>
-            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/quemador.c</file>
-            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/precalentador.c</file>
+            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/configuraciones.c</file>
             <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/main.c</file>
-            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/molino.c</file>
+            <file>file:/D:/Electrónica/Contraut/Proyectos/V5-MixOil/Franco(Ultimo)/dspic33_software/inicio(v4).X/rutinas_genericas.c</file>
         </group>
     </open-files>
 </project-private>

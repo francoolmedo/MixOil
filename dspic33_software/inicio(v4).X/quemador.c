@@ -46,6 +46,7 @@ extern bool BANDERA_HELPQNDmin;
 extern bool BANDERA_HELPQTCF;
 extern unsigned int TP1S;
 extern unsigned int quemadorloop;
+extern unsigned int NP5S;
 
 void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
     tabla_sk = 0;
@@ -98,26 +99,12 @@ void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
     if (REhorno == 1 && BANDERA_HELPQNDmax == 0 && BANDERA_HELPQNDmin == 0 && BANDERA_HELPQTCF == 0) { // HAY REACTOR EN EL HORNO
         /* ALARMAS CON REACTOR EN EL HORNO */
 
-        if (aviso_Qarr == 0) {
-            if (BANDERA_RETROCERQ == 1) {
-                num = 0;
-                AlarS = 0;
-                aviso_Qarr = 0;
-                BANDERA_quemador = 0;
-                apagar_Q = 0;
-                BANDERA_ALARQUEM = 1;
-                CHEK_A = -1;
-                tabla_sk = 1;
-                return;
-            }
+        if (!aviso_Qarr) {
 
-            if (TP1S == 0) {
+            if (!TP1S) {
                 // MENSAJE ENCENDER QUEMADOR SI NO HAY ALARMAS
                 generar_A(0x650004, 0x0400, 0, 0);
-            }
 
-
-            if (TP10S == 0) {
                 // ESPERANDO TECLA SK - ENCENDER- ACTUALIZAR- RETORNAR
                 if (BANDERA_RETROCERQ == 1) {
                     num = 0;
@@ -126,10 +113,14 @@ void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
                     BANDERA_quemador = 0;
                     apagar_Q = 0;
                     BANDERA_ALARQUEM = 1;
+                    BANDERA_RETROCERQ = 0;
                     CHEK_A = -1;
                     tabla_sk = 1;
+                    return;
                 }
+            }
 
+            if (TP10S == NP5S) {
                 BANDERA_ACTUALIZAQ = 1;
 
                 //SK ACTUALIZAR CONDICION BANDERA NUM=1 ,BANDERA tabla_sk  =0
@@ -142,7 +133,7 @@ void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
         }
 
         // Se presiono ENCENDER QUEMADOR
-        if (BANDERA_quemador == 1 && aviso_Qarr == 1) {
+        if (aviso_Qarr) {
             if (BANDERA_RETROCERQ == 1) {
                 num = 0;
                 AlarS = 0;
@@ -152,22 +143,23 @@ void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
                 BANDERA_ALARQUEM = 1;
                 CHEK_A = -1;
                 tabla_sk = 1;
+                BANDERA_RETROCERQ = 0;
                 return;
             }
 
             //            if (TP1S == 0) {
-            //MENSAJE EN PROCESO DE ENCENDIDO
-            generar_A(0x650000, 0x1500, 0, 0);
+            
+            generar_A(0x650000, 0x1500, 0, 0); // MENSAJE EN PROCESO DE ENCENDIDO
 
-            if (strncmp(dato_Rx, "H=", 2) == 0)
-                sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
+//            if (strncmp(dato_Rx, "H=", 2) == 0)
+//                sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
             //            }
             CHEK_A = -1;
         }
 
 
         //Comienza Rutina de Arranque: EN PROCESO DE ENCENDIDO
-        if (BANDERA_quemador == 1 && aviso_Qarr == 1 && Qmarch == 0) {
+        if (aviso_Qarr) {
 
             if (BANDERA_RETROCERQ == 1) {
                 num = 0;
@@ -178,6 +170,7 @@ void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
                 BANDERA_ALARQUEM = 1;
                 CHEK_A = -1;
                 tabla_sk = 1;
+                BANDERA_RETROCERQ = 0;
                 return;
             }
 
@@ -187,33 +180,37 @@ void Quemador() { //MANEJO DEL QUEMADOR Y DE IMPRESIONES
             }
 
             if (quemadorloop >= (dR * 100)) {
-                Qarr = 1;
-                aviso_Qarr = 0;
-                BANDERA_quemador = 0;
-                num = 0;
-                apagar_Q = 0;
-                BANDERA_ALARQUEM = 1;
-                CHEK_A = -1;
-                RES1 = 5; // ERROR EN EL TIEMPO
-                tabla_sk = 1;
-                return;
-
-            } else if ((quemadorloop >= 500) && (quemadorloop < dR)) {
+                if (!Qmarch) {
+                    Qarr = 1;
+                    aviso_Qarr = 0;
+                    BANDERA_quemador = 0;
+                    num = 0;
+                    apagar_Q = 0;
+                    APQ = 0;
+                    BANDERA_ALARQUEM = 1;
+                    CHEK_A = -1;
+                    RES1 = 5; // ERROR EN EL TIEMPO
+                    tabla_sk = 1;
+                    quemadorloop = 0;
+                    return;
+                } else {
+                    aviso_Qarr = 0;
+                    BANDERA_quemador = 0;
+                    num = 0;
+                    apagar_Q = 1;
+                    APQ = 1;
+                    BANDERA_ALARQUEM = 0;
+                    CHEK_A = -1;
+                    RES1 = 0; // NO ERRORES
+                    tabla_sk = 1;
+                    quemadorloop = 0;
+                    return;
+                }
+            } else if ((quemadorloop >= 500) && (quemadorloop < (dR * 100))) {
                 Qarr = 0;
-                aviso_Qarr = 0;
-                BANDERA_quemador = 0;
-                num = 0;
-                apagar_Q = 1;
-                APQ = 1;
-                BANDERA_ALARQUEM = 0;
-                CHEK_A = -1;
-                RES1 = 0; // NO ERRORES
-                tabla_sk = 1;
-                return;
+            } else if (quemadorloop < 500) {
+                sonido_2(quemadorloop);
             }
-
-            sonido_2(quemadorloop);
-
         }
         /*FIN del Ciclo de Encendido QUEMADOR*/
 

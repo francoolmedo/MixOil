@@ -27,14 +27,15 @@ unsigned int convierteAD(int icanal);
 //-------------------------------------------------------------------
 
 //---------------INICIALIZACION DE UART------------------------------
-void inicializaUART(int BRGVAL);
+void inicializaUART(int BAUDIOS);
 //-------------------------------------------------------------------
 
 //---------------INICIALIZACION Y CONFIGURACION DE LA DMA------------
-void inicializaDMA(void); // Inicializacion DMA0
+void inicializaDMA_TX(void); // Inicializacion DMA0 para TX
+void inicializaDMA_RX(void); // Inicializacion DMA0 para RX
 void enviar_DMA(void); // Enviar dato de DMA0 a UART1
-void cargar_DMA_A(char *); // Cargar datos a DMA0 
-void cargar_DMA_C(char *); // Cargar datos a DMA0
+void cargar_DMA_A(const char *enviar, unsigned int longitud); // Cargar datos a DMA0 
+void procesar_mensaje(void);
 //-------------------------------------------------------------------
 
 //---------------GENERAR FUNCION RAMPA MEDIANTE DAC 0808- 8 BIT 
@@ -101,5 +102,5 @@ void inicializaPrioridadInterrupciones(void);
 
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void);
 void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void);
-void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt(void);
-void __attribute__((__interrupt__, no_auto_psv)) _DMA0Interrupt(void);
+void __attribute__((interrupt, auto_psv)) _DMA0Interrupt(void);
+void __attribute__((interrupt, auto_psv)) _DMA1Interrupt(void);

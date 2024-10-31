@@ -57,13 +57,13 @@
         <targetDevice>dsPIC33FJ256MC710</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>noID</platformTool>
+        <platformTool>ICD3PlatformTool</platformTool>
         <languageToolchain>XC16</languageToolchain>
         <languageToolchainVersion>2.10</languageToolchainVersion>
         <platform>3</platform>
       </toolsSet>
       <packs>
-        <pack name="dsPIC33F-GP-MC_DFP" vendor="Microchip" version="1.3.64"/>
+        <pack name="dsPIC33F-GP-MC_DFP" vendor="Microchip" version="1.4.235"/>
       </packs>
       <ScriptingSettings>
       </ScriptingSettings>
@@ -182,7 +182,7 @@
         <property key="general-code-protect" value="no_code_protect"/>
         <property key="general-write-protect" value="no_write_protect"/>
         <property key="generate-cross-reference-file" value="false"/>
-        <property key="heap-size" value=""/>
+        <property key="heap-size" value="1024"/>
         <property key="input-libraries" value=""/>
         <property key="linker-stack" value="true"/>
         <property key="linker-symbols" value=""/>

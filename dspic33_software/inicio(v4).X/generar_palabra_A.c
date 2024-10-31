@@ -13,7 +13,7 @@
 #include <p33FJ256MC710.h>
 /*  Configuracion Puerto serial para velocidades de 115200 - 9600 Baudios*/
 #define FCY 35007500UL
-#define BAUDRATE 115000 //colocar 115000 para que BGRVAL=18 o 9596 para BGRVAL=227
+#define BAUDRATE 115200 //colocar 115000 para que BGRVAL=18 o 9596 para BGRVAL=227
 #define BRGVAL ((FCY/BAUDRATE)/16)-1 
 #include "libpic30.h"
 
@@ -63,10 +63,12 @@ void generar_A(unsigned long int SKTXT, unsigned int db, unsigned int SK, unsign
     CHEK_A = (TIR2 + PIR + ApSApSV + tCIC + TIB + TIP + TCF + TD + ND + SKTXT + RES1 + SK + DA + DB + ET + tETAP + FINAL)&(0x00FF);
     //datos    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18 19  20      = caracteres 65
 
-    sprintf(aux_dma_tx, "A=%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.2x%.3x%.3x%.4x%.4x%.3x%.3x%.3x%.6lx%.2x%.2x\n",
-            TIR2, PIR, ApSApSV, tCIC, TIB, TIP, TCF, TD, ND, ET, tETAP, FINAL, DA, DB, RES1, RES2, RES3, SKTXT, SK, CHEK_A);
+
+    sprintf(aux_dma_tx, "A=%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.3x%.2x%.3x%.3x%.4x%.4x%.3x%.3x%.3x%.6lx%.2x%.2x\n", TIR2, PIR, ApSApSV, tCIC, TIB, TIP, TCF, TD, ND, ET, tETAP, FINAL, DA, DB, RES1, RES2, RES3, SKTXT, SK, CHEK_A);
+
+    fflush(NULL);
     
-    cargar_DMA_A(aux_dma_tx);
+    cargar_DMA_A(aux_dma_tx, sizeof(aux_dma_tx));
     enviar_DMA();
 
     //ejemplo : A=00000000000000000000000000000000000310000000031

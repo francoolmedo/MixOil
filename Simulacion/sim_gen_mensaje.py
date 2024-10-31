@@ -14,11 +14,53 @@ Punto = 0
 quemador = 0
 molino = 0
 precalentador = 0
+timeout = 0
 
 dato_Rx = "" 
 RX_CHECK_C = 0x00
 CHECK_C = 0x2E  # Debes definir el valor de CHEK_C según tu lógica
 CRC = 0x0C
+
+
+T = 0
+dR = 0 
+NDB = 0
+NDMAX = 0
+NDMIN = 0 
+NEQ = 0  
+PEMP = 0
+PETARA = 0
+PIRMAX = 0
+PIRNOM = 0
+STALARM = 0
+TCCORT = 0
+TCFAlar = 0
+TDMax = 0
+tESTR = 0
+TEXT = 0
+TIRBP = 0
+TIRC1 = 0
+TIRC2 = 0
+TIRC3 = 0
+TIRNA = 0
+TPCMAX = 0 
+tPIR1 = 0
+tPIR2 = 0
+tPIR3 = 0
+TMAN = 0 
+TPIRO1 = 0 
+TPIRO2 = 0 
+TPIRO3 = 0 
+TVUELC = 0 
+Esc500 = 0 
+Esc800 = 0 
+Esc060 = 0 
+EscMPX = 0 
+EscNIV = 0 
+dPIR = 0
+ALARLAV = 0
+ALARINM = 0
+
 
 tCIC = 0x000
 PIR = 0x000
@@ -43,6 +85,7 @@ SKTXT = 0x000000
 SK = 0x00
 CHECK_A = 0x00
 RX_CHECK_A = 0x00
+CHEK_P = 0x00
 
 def generar_A(SKTXT, db, SK, RES1):
     global mensaje_tx
@@ -79,11 +122,13 @@ def check (mensaje):
     global CRC
     global CHECK_A
     global RX_CHECK_A
+    global timeout
     
     mensaje = mensaje.decode()
     mensaje = mensaje.strip()
     
-    if (Punto > 1):
+
+    if (Punto > 1 and Punto != 2):
         while (True):
             print(f"chequeando el mensaje: {mensaje}")
 
@@ -126,7 +171,28 @@ def check (mensaje):
         else:
             print("No coincide CHECKSUM_A")
             return
-            
+    elif (Punto == 2):
+    
+        print(f"chequeando el mensaje: {mensaje}")
+        
+        if mensaje.startswith('H'):
+            try:
+                RX_CHECK_A = int(mensaje[2:4], 16)
+                if RX_CHECK_A == 0x02:
+                    print(f"RX_CHECK_A OKEY: {RX_CHECK_A:#x}")  # Mostrar el valor de RX_CHECK_A en hexadecimal
+                    return
+                else:
+                    print(f"No coincide CHECKSUM_A: {RX_CHECK_A:#x} y CHECK_A: {CHECK_A:#x}")
+                    return
+            except ValueError:
+                print("Valor inválido, debe ser hexadecimal.")
+        elif mensaje.startswith('G'):
+            print(f"Parametros: {mensaje}")
+            return
+        else:
+            print("No coincide CHECKSUM_A")
+            return
+    
     elif (Punto == 0):
         while (True):
             print(f"chequeando el mensaje: {mensaje}")
@@ -139,6 +205,12 @@ def check (mensaje):
                         Punto = 1
                         return
                     else:
+                        if timeout >= 10:
+                            Punto = 2
+                            timeout = 0
+                            print("Cambiando Punto para editar parametros")
+                        else:
+                            timeout += 1
                         print(f"No coincide CHECKSUM_C: {RX_CHECK_C:#x}")
                         return
                 except ValueError:
@@ -165,12 +237,15 @@ def send_msg():
     while RX_CHECK_A != CHECK_A:
         ser.write(mensaje_tx.encode())
         sleep(0.4)
-        mensaje_rx = ser.read_until('\n'.encode(), 60)
+        mensaje_rx = ser.read_until('\n'.encode(), 90)
         check(mensaje_rx)
     RX_CHECK_A = 0x00
     print(f"Mensaje enviado: {mensaje_tx}")
     print(f"mensaje recibido: {mensaje_rx.decode()}")
     return
+
+
+
 
 while(True):
     
@@ -206,7 +281,46 @@ while(True):
         if modulo == 1:
             Punto = 3
         elif modulo == 2:
-            print("ja")
+            Punto = 2
+    
+    if Punto == 2:
+        print(f"Punto {Punto}")
+        sleep(0.4)
+        
+        SK = 2
+        CHEK_A = 0x0C;
+        
+        mensaje_tx = (f"P={T:03x}{dR:03x}{NDB:03x}{NDMAX:03x}{NDMIN:03x}{NEQ:03x}{PEMP:03x}{PETARA:03x}"
+          f"{PIRMAX:03x}{PIRNOM:03x}{STALARM:03x}{TCCORT:03x}{TCFAlar:03x}{TDMax:03x}{tESTR:03x}"
+          f"{TEXT:03x}{TIRBP:03x}{TIRC1:03x}{TIRC2:03x}{TIRC3:03x}{TIRNA:03x}{TPCMAX:03x}"
+          f"{tPIR1:03x}{tPIR2:03x}{tPIR3:03x}{TMAN:03x}{TPIRO1:03x}{TPIRO2:03x}{TPIRO3:03x}"
+          f"{TVUELC:03x}{Esc500:03x}{Esc800:03x}{Esc060:03x}{EscMPX:03x}{EscNIV:03x}{dPIR:03x}"
+          f"{ALARLAV:03x}{ALARINM:03x}{SK:02x}{CHEK_A:02x}\n")
+        
+        
+        while RX_CHECK_A != CHEK_A:
+            send_msg()
+        
+        SK = 0
+        CHEK_A = 0x0C;
+        
+        mensaje_tx = (f"P={T:03x}{dR:03x}{NDB:03x}{NDMAX:03x}{NDMIN:03x}{NEQ:03x}{PEMP:03x}{PETARA:03x}"
+          f"{PIRMAX:03x}{PIRNOM:03x}{STALARM:03x}{TCCORT:03x}{TCFAlar:03x}{TDMax:03x}{tESTR:03x}"
+          f"{TEXT:03x}{TIRBP:03x}{TIRC1:03x}{TIRC2:03x}{TIRC3:03x}{TIRNA:03x}{TPCMAX:03x}"
+          f"{tPIR1:03x}{tPIR2:03x}{tPIR3:03x}{TMAN:03x}{TPIRO1:03x}{TPIRO2:03x}{TPIRO3:03x}"
+          f"{TVUELC:03x}{Esc500:03x}{Esc800:03x}{Esc060:03x}{EscMPX:03x}{EscNIV:03x}{dPIR:03x}"
+          f"{ALARLAV:03x}{ALARINM:03x}{SK:02x}{CHEK_A:02x}\n")
+            
+        
+        while RX_CHECK_A != CHEK_A:
+            send_msg()
+        
+        while RX_CHECK_A != 0x02:
+            mensaje_tx = ("A=00000000000000000000000000000000000000002000000000000000000202\n")
+            send_msg()
+
+        Punto = 1
+        
         
     
     if Punto == 3:

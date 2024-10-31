@@ -9,10 +9,10 @@ extern unsigned int min;
 void pulso_watchdog(void) {
     ticks++;
 
-    if (ticks == 100)
+    if (ticks == 50)
         ticks = 0;
     
-    if (ticks <= 50) { //Tiempo Watchdog 1seg
+    if (ticks >= 100) { //Tiempo Watchdog 1seg
         STATUS_LED = 0;
         WDD = 0;
     } else {

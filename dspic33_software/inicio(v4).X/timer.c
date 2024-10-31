@@ -117,7 +117,7 @@ void inicializaTimer2(void) {
     T2CONbits.TCKPS = 0b10; // Select 1:64 Prescaler 01
 
     TMR2 = 0x00; // Clear timer register
-    PR2 = 2735; // valor cargado para generar interrupcion 10ms 
+    PR2 = 5470; // valor cargado para generar interrupcion 10ms 
     IPC1bits.T2IP = 0x06; // Set Timer1 Interrupt Priority Level 1 estaba
     IFS0bits.T2IF = 0; // Clear Timer1 Interrupt Flag
 

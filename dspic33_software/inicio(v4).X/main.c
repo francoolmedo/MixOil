@@ -14,7 +14,7 @@
 /*  Configuracion Puerto serial para velocidades de 115200 - 9600 Baudios*/
 #define FCY 35007500UL
 #define BAUDRATE 115000 //colocar 115000 para que BGRVAL=18 o 9596 para BGRVAL=227
-#define BRGVAL ((FCY/BAUDRATE)/16)-1 
+#define BRGVAL (FCY/(BAUDRATE*16))-1 
 #include "libpic30.h"
 
 
@@ -22,7 +22,7 @@
 
 // ********** DEFINICIONES ***********
 
-float version = 030423; //03 de Abril de 2023
+float version = 291024; //29 de Octubre de 2024
 
 
 /***************************************************************************
@@ -217,7 +217,8 @@ unsigned int RX_CHEKC = 0;
 
 //---------- BUFFER AUXILIAR PARA LA  DMA -------------------------------- 
 
-unsigned int BufferA[TAM_DMA] __attribute__((space(dma))); // DE DECLARA TAMAÑO DMA
+unsigned int BufferA[TAM_DMA] __attribute__((space(dma))); // Declaro tamanio DMA TX
+unsigned int BufferB[TAM_DMA] __attribute__((space(dma))); // Declaro tamanio DMA RX
 char aux_dma_tx[TAM_DMA] = {0}; // VARIABLE AUXILIAR PARA CARGAR EN DMA
 
 // *OBSERVACION: VERIFICAR EL TAMAÑO MAXIMO DE ENVIO Y RECEPCION CONTANDO CON 
@@ -358,6 +359,7 @@ bool APP = 0;
 bool apagar_P = 0; // BANDERA APAGAR PRECALENTADOR
 bool BANDERA_ACTUALIZAP = 0;
 bool BANDERA_RETROCERP = 0;
+unsigned int precalloop = 0;
 
 
 unsigned int ESTADO_0 = 0;
@@ -390,7 +392,8 @@ int main(void) {
     configurarSistema(); //Deshabilita WDT,configura PLL y Entradas/Salidas
     inicializaUART(BRGVAL); //Inicializa UART     
     inicializaADC(); //Inicializacion ADC 10 bit
-    inicializaDMA(); //Inicializa DMA 
+    inicializaDMA_TX();
+    inicializaDMA_RX();
     inicializaTimer2(); //iniciliza timer2 (NO INICIA)
 
     // Inicializo valores de contadores de TAREAS PERIODICAS
@@ -398,14 +401,11 @@ int main(void) {
     TP10S = NP10K;
 
     //INDICADOR OK EN PLACA LED VERDE 
-    STATUS_LED = 1;
     SEL = 1;
-    WDD = 0;
 
     for (i = 0; i <= 3; i++) {
         __delay_ms(200);
         printf("%d\n", i);
-        WDD = 1;
     }
 
     /*PRUEBA DE RELEES*/
@@ -427,10 +427,8 @@ int main(void) {
 
     control_param();
 
-    __delay_ms(2000);
+    __delay_ms(4000);
 
-    WDD = 1;
-    STATUS_LED = 0;
 
     /*PARAMETROS DERIVADO CALCULOS*/
 
@@ -459,6 +457,8 @@ int main(void) {
 
     Punto = 0; //POSICIONA PROGRAMA EN PUNTO 0
 
+    int tout_p0 = 0;
+
     //------------------- LOOP TAREA NO PERIODICA (PSEUDO PERIODICA) -------------------
     while (1) {
 
@@ -469,10 +469,7 @@ int main(void) {
                 HAB = 0;
                 WDD = 0;
 
-                while (WDOK == 0) {
-                    WDD = 0;
-                    __delay_ms(1000);
-                    WDD = 1;
+                while (!WDOK) {
                     __delay_ms(1000);
                 }
 
@@ -491,24 +488,34 @@ int main(void) {
                 do {
 
                     if (TP1S == 0) {
-                        if (RX_CHEKC != CHEK_C && DMA0REQbits.FORCE == 0) {
+                        if (RX_CHEKA != CHEK_C && DMA0REQbits.FORCE == 0) {
                             sprintf(aux_dma_tx, "C=%.2x%.2x%.2x\n", 1, CHEK_P, CHEK_C); // ME DEVUELVE LO QUE YO LE ENVIO COMO CHEK_C
-                            cargar_DMA_C(aux_dma_tx);
+                            //                            printf("C=%.2x%.2x%.2x\n", 1, CHEK_P, CHEK_C);
+                            cargar_DMA_A(aux_dma_tx, sizeof (aux_dma_tx));
                             enviar_DMA();
                         }
+                        procesar_mensaje();
                         /* CHEK DE PUERTO Y TABLA DE PARAMETROS */
-                        if (strncmp(dato_Rx, "H=", 2) == 0)
-                            sscanf(dato_Rx, "H=%2x", &RX_CHEKC);
+                        //                        if (strncmp(dato_Rx, "H=", 2) == 0)
+                        //                            sscanf(dato_Rx, "H=%2x", &RX_CHEKC);
                     }
-                } while (RX_CHEKC != CHEK_C);
+                    if (tout_p0 == 8) {
+                        tout_p0 = 0;
+                        Punto = 2;
+                        break;
+                    } else {
+                        tout_p0++;
+                    }
+                } while (RX_CHEKA != CHEK_C);
 
-                if (RX_CHEKC == CHEK_C) {
+                if (RX_CHEKA == CHEK_C) {
                     RX_CHEKC = 0;
                     CHEK_A = -1; // si se corta elmensaje manda H=0 OJO
                     SK_C = 0;
+                    tout_p0 = 0;
                 }
 
-                //------ HASTA AQUI SE VERIFICA EL CHEKSUM DE TABLA DE PARAMETROS VARIABLE CSUM Y PUSO PANTALLA 2  ------------------                        
+                //------ HASTA AQUI SE VERIFICA EL CHEKSUM DE TABLA DE PARAMETROS VARIABLE CSUM Y PUSO PANTALLA 2  ------------------  
                 HAB = 1;
                 Punto = 1; //POSICIONA TAREA PERIODICA EN PUNTO 1
 
@@ -520,15 +527,17 @@ int main(void) {
                 // Chequea respuesta de MMI con CHEK_A cada 1 segundo
                 do {
                     if (TP1S == 0 && SK_C == 0) {
-                        if (RX_CHEKA != 49) { //CONTROL DE LOS CHEK ENVIADO
-                            cargar_DMA_A("A=00000000000000000000000000000000000000001110000000000000200031\n");
+                        if (RX_CHEKA != 49 && DMA0REQbits.FORCE == 0) { //CONTROL DE LOS CHEK ENVIADO}
+                            cargar_DMA_A("A=00000000000000000000000000000000000000001110000000000000200031\n", sizeof ("A=00000000000000000000000000000000000000001110000000000000200031\n"));
                             enviar_DMA();
                         }
-                        if (strncmp(dato_Rx, "H=", 2) == 0)
-                            sscanf(dato_Rx, "H=%2x", &RX_CHEKA); // verificacion de CRC enviado A=
                     }
+                    //                    if (strncmp(dato_Rx, "H=", 2) == 0) {
+                    //                        sscanf(dato_Rx, "H=%2x", &RX_CHEKA); // verificacion de CRC enviado A=
+                    //                    }
+                    procesar_mensaje();
+                } while (RX_CHEKA != 49);
 
-                } while (RX_CHEKA != CHEK_A);
                 if (RX_CHEKA == 49) {
                     SK_C = 1;
                     CHEK_A = -1;
@@ -540,10 +549,10 @@ int main(void) {
                         Punto = 2;
                         SK_C = 0;
                     } else if (!SON) {
+                        //                        HAB = 1;
                         Punto = 3;
                         SK_C = 0;
                     }
-
                 } while (Punto == 1);
 
                 /*FIN DEL PUNTO 1*/
@@ -555,9 +564,9 @@ int main(void) {
                     __delay_ms(10);
                     generar_A(0x000000, 0x0000, 0, 0); // Limpio los letreros de las SoftKeys ya que no se utilizan
                     __delay_ms(10);
-                    if (strncmp(dato_Rx, "H=", 2) == 0) {
-                        sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
-                    }
+                    //                    if (strncmp(dato_Rx, "H=", 2) == 0) {
+                    //                        sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
+                    //                    }
                 }
 
                 STOP_Timer2(); //DETIENE TIMER 2 (TAREA PERIODICA DE 10MS )
@@ -572,9 +581,9 @@ int main(void) {
                 do {
                     printf("A=00000000000000000000000000000000000000002000000000000000000202\n");
                     __delay_ms(15);
-                    if (strncmp(dato_Rx, "H=", 2) == 0) {
-                        sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
-                    } // verificacion de CRC enviado
+                    //                    if (strncmp(dato_Rx, "H=", 2) == 0) {
+                    //                        sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
+                    //                } // verificacion de CRC enviado
                 } while (RX_CHEKA != 2);
 
                 __asm__ volatile ( "reset "); //Instruccion de reinicio A LA SALIDA DE PARAMETROS   
@@ -591,12 +600,11 @@ int main(void) {
 
                 if (SK_C == 0) {
                     do {
-                        if (TP1S == 0) {
-                            generar_A(0x650321, 0x0100, 1, 0);
-
-                            if (strncmp(dato_Rx, "H=", 2) == 0)
-                                sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
+                        if (TP1S == 0 && DMA0REQbits.FORCE == 0) {
+                            generar_A(0x650321, 0x0010, 1, 0);
                         }
+                        //                        if (strncmp(dato_Rx, "H=", 2) == 0)
+                        //                            sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
                     } while (RX_CHEKA != CHEK_A);
 
                     if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO CAMBIO DE PANTALLA
@@ -610,10 +618,14 @@ int main(void) {
                 //-------- PUNTO 4 : SELECCION DE MODO ---------  
             case 4:
 
-                if (TP10S == NP4S) {
+                if (TP10S == NP4S && DMA0REQbits.FORCE == 0) {
                     DA = AlarR << 13 | EN_ESPERA << 10 | MODO_MANUAL << 11 | EN_CICLO << 12 | BombaM_march << 9 | Molino_march << 8 | Cesto_1 << 7 | Cesto_0 << 6 | Ctl_Llama << 5 | REpc << 4 | REbasc << 3 | AlarV << 2 | LlaQuemador << 1 | REhorno;
-                    generar_A(0x650321, 0x0100, 1, 0);
+
+                    generar_A(0x650321, 0x0010, 1, 0);
+
                 }
+                //                if (strncmp(dato_Rx, "H=", 2) == 0)
+                //                    sscanf(dato_Rx, "H=%2x", &RX_CHEKA);
 
                 if (SOFTK_N == 0) {
                     switch (SOFTK_A) {
@@ -674,7 +686,7 @@ int main(void) {
                 if (SALIR_MANUAL == 1 && SK_C == 1) {
                     if (RX_CHEKA != CHEK_A && (TP1S == 0)) {
                         generar_A(0x650edc, 0x0322, 0, 0);
-                        generar_A(0x650edc, 0x0322, 0, 0);
+                        printf(aux_dma_tx);
                     }
                     if (RX_CHEKA == CHEK_A) {
                         CHEK_A = -1;
@@ -684,7 +696,7 @@ int main(void) {
                     // BORRADO DE SK Y  LETREROS DE ZONA
                     if (RX_CHEKA != CHEK_A && (TP1S == 0)) {//sk eo
                         generar_A(0x650edc, 0x0300, 0, 0);
-                        generar_A(0x650edc, 0x0322, 0, 0);
+                        printf(aux_dma_tx);
                     }
                     if (RX_CHEKA == CHEK_A) { //CONTROL DE LOS CHEK ENVIADO BORRAR TODAS LAS SK
                         CHEK_A = -1;
@@ -1046,7 +1058,7 @@ int main(void) {
                     }
                     //*********************FIN PRE CALENTADOR*************************************         
 
-                    
+
 
                     /****************************MOLINO******************************************/
                     //PULSO TECLA  2 ENCENDER MOLINO DENTRO DE MANUAL                   
@@ -1139,8 +1151,8 @@ int main(void) {
         }
 
 
-        if (strncmp(dato_Rx, "H=", 2) == 0)
-            sscanf(dato_Rx, "H=%2x", &RX_CHEKA); // verificacion de CRC enviado A= 
+        //        if (strncmp(dato_Rx, "H=", 2) == 0)
+        //            sscanf(dato_Rx, "H=%2x", &RX_CHEKA); // verificacion de CRC enviado A= 
 
 
         // FINAL DE LA TAREA NO PERIODICA
@@ -1151,17 +1163,20 @@ int main(void) {
 /*INTERRUPCION TIMER2 10ms TAREA PERIODICA */
 void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
 
-    if (SON == 1) {
-        if ((Punto != 2) && (Punto != 0)) {
-            Punto = 0;
-            signal_emergencia = 1;
-            HAB = 0;
+    if (Punto > 1) {
+        if (!SON) {
+            if ((Punto != 2) && (Punto != 0)) {
+                Punto = 0;
+                //                signal_emergencia = 1;
+                HAB = 0;
+            }
         }
     }
 
-    if (HAB == 1) {
+    if (HAB) {
         pulso_watchdog();
     }
+
 
     if ((signal_emergencia == 1)) { // PULSADOR DE EMERGENCIA BORRAR TODAS LAS BANDERAS Y APAGAR MAQUINAS
         __asm__ volatile ("reset "); //Instruccion de reinicio A LA SALIDA DE PARAMETROS    
@@ -1196,7 +1211,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     if ((PE2 == 1 && PE1 == 0) && (BANDERA_molino == 1 && aviso_Larr == 1)) {
         molinoloop++;
     }
-    
+
     // Contador Molino para Secuencia de Arranque
     if (REhorno == 1 && BANDERA_HELPQNDmax == 0 && BANDERA_HELPQNDmin == 0 && BANDERA_HELPQTCF == 0 && aviso_Qarr == 1) {
         quemadorloop++;
